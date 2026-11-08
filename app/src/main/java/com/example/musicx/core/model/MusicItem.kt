@@ -39,3 +39,12 @@ sealed interface CatalogItem {
 enum class CatalogFilter { ALL, SONGS, ALBUMS, ARTISTS, PLAYLISTS }
 
 data class BrowsePage(val id: String, val title: String, val items: List<CatalogItem>)
+
+sealed class CatalogError(message: String, cause: Throwable? = null) : Exception(message, cause) {
+    object EmptyQuery : CatalogError("Search query is blank")
+    object EmptyBrowseId : CatalogError("Browse id is blank")
+    object InvalidResponse : CatalogError("Catalog response was invalid")
+    object ResponseTooLarge : CatalogError("Catalog response exceeded the size limit")
+    class Http(val statusCode: Int) : CatalogError("Catalog request rejected (HTTP $statusCode)")
+    class Network(cause: Throwable) : CatalogError("Catalog request failed", cause)
+}

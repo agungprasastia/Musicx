@@ -62,20 +62,20 @@
 - Produces `class YouTubeMusicRepository(private val client: YouTubeMusicClient)` with `suspend fun search(query: String, filter: CatalogFilter): Result<List<CatalogItem>>` and `suspend fun browse(id: String): Result<BrowsePage>`.
 - Client transport isolated from parser/mapping so tests use pure DTO inputs and no live requests.
 
-- [ ] **Step 1: Write parser/mapping tests**
+- [x] **Step 1: Write parser/mapping tests**
 
 Test valid track/album/artist/playlist results map to their typed domain items, empty result maps to empty list, malformed required IDs/titles are dropped or returned as typed parse failure, and blank query is rejected before transport call.
-- [ ] **Step 2: Run focused test and observe RED**
+- [x] **Step 2: Run focused test and observe RED**
 
 Run from PowerShell: `$p='D:\KULIAH\OpenSource\Musicx'; Set-Location D:\; .\KULIAH\OpenSource\Musicx\gradlew.bat -p $p :app:testDebugUnitTest --tests com.example.musicx.catalog.youtube.YouTubeMusicRepositoryTest --no-daemon --console=plain --no-configuration-cache`.
 Expected: FAIL because repository/model symbols are missing. (Use standard Windows PowerShell invocation; no edits to permanent `JAVA_HOME`.)
-- [ ] **Step 3: Add only required client dependencies and define domain/DTO boundaries**
+- [x] **Step 3: Add only required client dependencies and define domain/DTO boundaries**
 
 Check existing dependencies first; add HTTP/serialization libraries only if absent. Keep version aliases centralized.
-- [ ] **Step 4: Implement repository mapping and request validation**
+- [x] **Step 4: Implement repository mapping and request validation**
 
 Transport uses cancellable suspend requests, HTTPS only, explicit timeout/response-size limits, and Result-based typed errors. Do not include request cookies or stream URLs in error strings/logs.
-- [ ] **Step 5: Re-run focused tests**
+- [x] **Step 5: Re-run focused tests**
 
 Expected: all repository mapping tests PASS.
 
@@ -92,16 +92,16 @@ Expected: all repository mapping tests PASS.
 - Produces `MusicViewModel.search(query: String, filter: CatalogFilter)`, `browse(id: String)`, `uiState: StateFlow<CatalogUiState>` where `CatalogUiState` models `Idle`, `Loading`, `Results`, `Empty`, and `Error`.
 - Selecting a `Track` emits callback only; this task does not claim playing until playback service confirms it.
 
-- [ ] **Step 1: Add UI tests**
+- [x] **Step 1: Add UI tests**
 
 Verify empty-query prompt, loading indicator, result rows, empty state, retryable error state, and Search/Home/Library screen navigation. Use a fake repository injected into ViewModel tests; Compose tests assert user-visible states.
-- [ ] **Step 2: Run unit/UI compilation tests and observe RED**
+- [x] **Step 2: Run unit/UI compilation tests and observe RED**
 
 Run `:app:testDebugUnitTest` for ViewModel tests and `:app:compileDebugAndroidTestKotlin` for instrumentation source compilation. Expected: missing ViewModel/UI state symbols; run connected instrumentation only when adb device/AVD is available.
-- [ ] **Step 3: Implement ViewModel and wire real catalog UI**
+- [x] **Step 3: Implement ViewModel and wire real catalog UI**
 
 Replace sample-only Search/browse result paths with repository state. Keep local demo data only for previews/tests; no fake result rows in production search.
-- [ ] **Step 4: Run focused tests and compile instrumentation sources**
+- [x] **Step 4: Run focused tests and compile instrumentation sources**
 
 Expected: ViewModel and Compose state tests PASS; test APK sources compile.
 
@@ -117,16 +117,16 @@ Expected: ViewModel and Compose state tests PASS; test APK sources compile.
 - Produces `interface StreamResolver { suspend fun resolve(trackId: String): Result<ResolvedStream> }`.
 - Resolver returns failure for blank ID, unsupported scheme/host, malformed response, unavailable track, timeout, and upstream rejection. Do not persist resolved stream URL.
 
-- [ ] **Step 1: Write resolver validation tests**
+- [x] **Step 1: Write resolver validation tests**
 
 Cover valid HTTPS URL, reject HTTP/non-allowlisted host, blank ID, malformed/expired response, timeout, and upstream failure without exposing full URL in error text.
-- [ ] **Step 2: Run focused test and observe RED**
+- [x] **Step 2: Run focused test and observe RED**
 
 Run from PowerShell: `$p='D:\KULIAH\OpenSource\Musicx'; Set-Location D:\; .\KULIAH\OpenSource\Musicx\gradlew.bat -p $p :app:testDebugUnitTest --tests com.example.musicx.playback.resolver.YouTubeStreamResolverTest --no-daemon --console=plain --no-configuration-cache`. Expected: resolver types absent.
-- [ ] **Step 3: Implement isolated YouTube resolver client**
+- [x] **Step 3: Implement isolated YouTube resolver client**
 
 Use replaceable client interface and only supported unofficial stream resolution needed for playable public content; do not implement DRM, paywall, or access-control circumvention.
-- [ ] **Step 4: Run focused resolver tests**
+- [x] **Step 4: Run focused resolver tests**
 
 Expected: tests PASS, stream URL redaction asserted.
 
@@ -151,27 +151,29 @@ Expected: tests PASS, stream URL redaction asserted.
 - Produces service-bound `PlaybackController` `StateFlow<PlaybackUiState>` and commands `play(track)`, `enqueue(track)`, `playPause()`, `seekTo(positionMs)`, `skipNext()`, `skipPrevious()`, `release()`.
 - `PlaybackUiState` distinguishes idle, resolving, ready/playing, paused, ended, and error; current track and position/duration come from Media3 state.
 
-- [ ] **Step 1: Write queue transition unit tests**
+- [x] **Step 1: Write queue transition unit tests**
 
 Test set queue/start index, append, next/previous bounds, remove current/other, move, and empty queue.
-- [ ] **Step 2: Run queue tests and observe RED**
+- [x] **Step 2: Run queue tests and observe RED**
 
 Expected: `PlaybackQueue` missing.
-- [ ] **Step 3: Implement queue model and run tests**
+- [x] **Step 3: Implement queue model and run tests**
 
 Expected: all queue transition tests PASS.
-- [ ] **Step 4: Add Media3 aliases/dependencies and manifest service**
+- [x] **Step 4: Add Media3 aliases/dependencies and manifest service**
 
 Add compatible Media3 ExoPlayer, Session, Common versions in catalog; service declares foreground service type `mediaPlayback` and only required permissions. No unverified media library additions.
-- [ ] **Step 5: Implement `PlaybackService` and controller**
+- [x] **Step 5: Implement `PlaybackService` and controller**
 
 Service exclusively owns ExoPlayer and MediaSession; resolver runs before adding playable MediaItem; release player/session on service destruction. Notification and lock-screen transport commands route through MediaSession. Audio focus and noisy-output handling use Media3 defaults.
-- [ ] **Step 6: Connect Compose controls to controller state**
+- [x] **Step 6: Connect Compose controls to controller state**
 
 Remove demo-play toggles/static timeline for production screen. Mini-player, Now Playing, queue, progress, and controls reflect actual `PlaybackUiState`; resolving/error states are visible and cannot say playing.
-- [ ] **Step 7: Add instrumentation tests and run available checks**
+- [x] **Step 7: Add instrumentation tests and run available checks**
 
 Test service session commands and notification metadata where emulator/device exists. Always run `:app:testDebugUnitTest`, `:app:compileDebugAndroidTestKotlin`, `:app:assembleDebug`. Connected tests report blocked if no adb device; do not claim them passed.
+
+Result: `PlaybackSessionTest` added and compiles; connected runtime remains BLOCKED (no adb device/AVD).
 
 ### Task 5: End-to-end catalog-to-background playback acceptance
 
@@ -179,18 +181,26 @@ Test service session commands and notification metadata where emulator/device ex
 - Modify: `app/src/androidTest/java/com/example/musicx/PlaybackSessionTest.kt`
 - Modify only affected catalog/playback/UI files as tests require.
 
-- [ ] **Step 1: Add end-to-end fake-resolver test**
+- [x] **Step 1: Add end-to-end fake-resolver test**
 
 Select catalog track → queue → resolver succeeds → Media3 prepares; assert state transitions resolving→ready and title/queue metadata match selected track. Resolver failure must reach error and never ready/playing.
+
+`PlaybackSessionTest` covers both paths with a fake `StreamResolver` and a local data-URI WAV; compiled but not executed (no device).
 - [ ] **Step 2: Run test and observe expected failure if integration missing**
+
+BLOCKED: no adb device/AVD available; test cannot be executed in this environment.
 - [ ] **Step 3: Fix smallest integration defect without adding unrelated features**
-- [ ] **Step 4: Run final local suite/build**
+
+BLOCKED: depends on Step 2 runtime observation.
+- [x] **Step 4: Run final local suite/build**
 
 Run from PowerShell: `$p='D:\KULIAH\OpenSource\Musicx'; Set-Location D:\; .\KULIAH\OpenSource\Musicx\gradlew.bat -p $p :app:testDebugUnitTest :app:compileDebugAndroidTestKotlin :app:assembleDebug --no-daemon --console=plain --no-configuration-cache`.
 Expected: `BUILD SUCCESSFUL`.
 - [ ] **Step 5: Manual device acceptance**
 
 On physical Android device: play a resolvable public track, background app, lock screen, test notification pause/next/seek, audio focus interruption, unavailable stream behavior, and service cleanup. Record device-only results separately from automated tests.
+
+BLOCKED: no physical device/emulator. Additionally, live guest `/player` currently returns `LOGIN_REQUIRED` from this network, so a resolvable public track may require sign-in.
 
 ## Deferred after Milestone 1
 

@@ -1,20 +1,39 @@
 package com.example.musicx.catalog.youtube
 
 import com.example.musicx.core.model.BrowsePage
+import com.example.musicx.core.model.CatalogError
 import com.example.musicx.core.model.CatalogFilter
 import com.example.musicx.core.model.CatalogItem
+import kotlinx.coroutines.CancellationException
 
-class YouTubeMusicRepository(private val client: YouTubeMusicClient) {
-    suspend fun search(query: String, filter: CatalogFilter): Result<List<CatalogItem>> {
-        if (query.isBlank()) return Result.failure(IllegalArgumentException("Search query is blank"))
-        return client.search(query.trim(), filter).map { items -> items.mapNotNull(::toDomain) }
+interface CatalogRepository {
+    suspend fun search(query: String, filter: CatalogFilter): Result<List<CatalogItem>>
+    suspend fun browse(id: String): Result<BrowsePage>
+}
+
+class YouTubeMusicRepository(private val client: YouTubeMusicClient) : CatalogRepository {
+    override suspend fun search(query: String, filter: CatalogFilter): Result<List<CatalogItem>> {
+        if (query.isBlank()) return Result.failure(CatalogError.EmptyQuery)
+        return client.search(query.trim(), filter).fold(
+            onSuccess = { items -> Result.success(items.mapNotNull(::toDomain)) },
+            onFailure = { Result.failure(it.asCatalogFailure()) },
+        )
     }
 
-    suspend fun browse(id: String): Result<BrowsePage> {
-        if (id.isBlank()) return Result.failure(IllegalArgumentException("Browse id is blank"))
-        return client.browse(id).map { page ->
-            BrowsePage(id = page.id, title = page.title, items = page.items.mapNotNull(::toDomain))
-        }
+    override suspend fun browse(id: String): Result<BrowsePage> {
+        if (id.isBlank()) return Result.failure(CatalogError.EmptyBrowseId)
+        return client.browse(id.trim()).fold(
+            onSuccess = { page ->
+                if (page.id.isBlank() || page.title.isBlank()) {
+                    Result.failure(CatalogError.InvalidResponse)
+                } else {
+                    Result.success(
+                        BrowsePage(id = page.id, title = page.title, items = page.items.mapNotNull(::toDomain))
+                    )
+                }
+            },
+            onFailure = { Result.failure(it.asCatalogFailure()) },
+        )
     }
 
     private fun toDomain(dto: CatalogDto): CatalogItem? {
@@ -27,5 +46,10 @@ class YouTubeMusicRepository(private val client: YouTubeMusicClient) {
             is CatalogDto.Artist -> CatalogItem.Artist(dto.id, dto.title, dto.artworkUrl)
             is CatalogDto.Playlist -> CatalogItem.Playlist(dto.id, dto.title, dto.artworkUrl, dto.trackCount)
         }
+    }
+
+    private fun Throwable.asCatalogFailure(): Throwable {
+        if (this is CancellationException) throw this
+        return this as? CatalogError ?: CatalogError.Network(this)
     }
 }
