@@ -30,7 +30,7 @@ import androidx.compose.ui.unit.dp
 import com.example.musicx.core.model.CatalogFilter
 import com.example.musicx.core.model.CatalogItem
 
-enum class MusicTab { Home, Search, Library }
+enum class MusicTab { Home, Search, Library, Spotify }
 
 private val browseShortcuts = listOf(
     "Charts" to "FEmusic_charts",

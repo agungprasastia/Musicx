@@ -50,14 +50,24 @@ import com.example.musicx.playback.PlaybackStatus
 import com.example.musicx.playback.PlaybackUiState
 import com.example.musicx.playback.resolver.InnerTubeYouTubePlayerClient
 import com.example.musicx.playback.resolver.YouTubeStreamResolver
+import com.example.musicx.spotify.SpotifyRepository
+import com.example.musicx.spotify.auth.EncryptedSpotifySecretStore
+import com.example.musicx.spotify.auth.SpotifyClientToken
+import com.example.musicx.spotify.auth.SpotifyTokenProvider
+import com.example.musicx.spotify.auth.SpotifyWebTokenHarvester
+import com.example.musicx.spotify.auth.parseClientToken
+import com.example.musicx.spotify.net.SpotifyHttpTransport
+import com.example.musicx.spotify.net.SpotifyLibraryClient
 
 @Composable
 fun MusicxApp(
     viewModel: MusicViewModel = viewModel(factory = MusicViewModelFactory),
+    spotifyViewModel: SpotifyViewModel = viewModel(factory = SpotifyViewModelFactory.create(LocalContext.current)),
     playbackController: PlaybackController = rememberDefaultPlaybackController(),
 ) {
     val state by viewModel.uiState.collectAsState()
     val playbackState by playbackController.state.collectAsState()
+    val spotifyUi by spotifyViewModel.ui.collectAsState()
     val context = LocalContext.current
     val notificationPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -81,6 +91,9 @@ fun MusicxApp(
     var browseOrigin by remember { mutableStateOf<BrowseOrigin?>(null) }
     var lastSearch by remember { mutableStateOf<SearchOrigin?>(null) }
     var showNowPlaying by rememberSaveable { mutableStateOf(false) }
+    var showSpotifyLogin by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) { spotifyViewModel.restore() }
 
     LaunchedEffect(selectedTab) {
         viewModel.clear()
@@ -99,10 +112,19 @@ fun MusicxApp(
         }
     }
 
-    BackHandler(enabled = showNowPlaying) { showNowPlaying = false }
-    BackHandler(enabled = browseOrigin != null && !showNowPlaying) { closeBrowse() }
+    BackHandler(enabled = showSpotifyLogin) { showSpotifyLogin = false }
+    BackHandler(enabled = showNowPlaying && !showSpotifyLogin) { showNowPlaying = false }
+    BackHandler(enabled = browseOrigin != null && !showNowPlaying && !showSpotifyLogin) { closeBrowse() }
 
     when {
+        showSpotifyLogin -> SpotifyLoginScreen(
+            onCookieHarvested = { secret ->
+                showSpotifyLogin = false
+                spotifyViewModel.connect(secret)
+            },
+            onCancel = { showSpotifyLogin = false },
+        )
+
         showNowPlaying -> NowPlayingScreen(
             state = playbackState,
             onPlayPause = playbackController::playPause,
@@ -176,9 +198,47 @@ fun MusicxApp(
                     )
 
                     MusicTab.Library -> LibraryScreen()
+
+                    MusicTab.Spotify -> SpotifyTabContent(
+                        state = spotifyUi,
+                        onLogin = { showSpotifyLogin = true },
+                        onDisconnect = spotifyViewModel::disconnect,
+                        onPlaylistSelected = spotifyViewModel::loadPlaylistTracks,
+                        onTrackSelected = { track -> spotifyViewModel.matchTrack(track) },
+                        onPlayMatched = { catalogTrack ->
+                            playbackController.play(catalogTrack)
+                            showNowPlaying = true
+                        },
+                        onRetry = spotifyViewModel::loadLibrary,
+                        onBack = spotifyViewModel::loadLibrary,
+                    )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SpotifyTabContent(
+    state: SpotifyUiState,
+    onLogin: () -> Unit,
+    onDisconnect: () -> Unit,
+    onPlaylistSelected: (com.example.musicx.spotify.model.SpotifyPlaylist) -> Unit,
+    onTrackSelected: (com.example.musicx.spotify.model.SpotifyTrack) -> Unit,
+    onPlayMatched: (CatalogItem.Track) -> Unit,
+    onRetry: () -> Unit,
+    onBack: () -> Unit,
+) {
+    when (state) {
+        SpotifyUiState.Disconnected -> SpotifyDisconnectedScreen(onLogin)
+        SpotifyUiState.Connecting -> SpotifyLoadingScreen()
+        SpotifyUiState.Loading -> SpotifyLoadingScreen()
+        SpotifyUiState.Expired -> SpotifyExpiredScreen(onLogin, onDisconnect)
+        is SpotifyUiState.Library -> SpotifyLibraryScreen(state.playlists, onPlaylistSelected, onDisconnect)
+        is SpotifyUiState.Tracks -> SpotifyTracksScreen(state.playlist, state.tracks, onTrackSelected, onBack)
+        is SpotifyUiState.Matching -> SpotifyMatchingScreen(state.track, state.progress)
+        is SpotifyUiState.MatchReview -> SpotifyMatchReviewScreen(state.track, state.decision, onPlayMatched, onBack)
+        is SpotifyUiState.Error -> SpotifyErrorScreen(state.message, onRetry, onDisconnect)
     }
 }
 
@@ -281,4 +341,37 @@ private object MusicViewModelFactory : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         return MusicViewModel(repository) as T
     }
+}
+
+private object SpotifyViewModelFactory {
+    fun create(context: android.content.Context): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            val appContext = context.applicationContext
+            val store = EncryptedSpotifySecretStore(appContext)
+            val harvester = SpotifyWebTokenHarvester(appContext)
+            val transport = SpotifyHttpTransport()
+            val tokenProvider = SpotifyTokenProvider(
+                store = store,
+                harvester = { secret -> harvester.harvest(secret) },
+                clientTokenSource = { fetchClientToken(transport) },
+            )
+            val libraryClient = SpotifyLibraryClient(tokenProvider, transport)
+            val repository = SpotifyRepository(store, tokenProvider, libraryClient)
+            val catalogRepository = YouTubeMusicRepository(
+                InnerTubeYouTubeMusicClient(OkHttpInnerTubeTransport())
+            )
+            @Suppress("UNCHECKED_CAST")
+            return SpotifyViewModel(repository, catalogRepository) as T
+        }
+    }
+}
+
+private suspend fun fetchClientToken(transport: SpotifyHttpTransport): SpotifyClientToken {
+    val body = """{"client_data":{"client_version":"1.2.52.442","client_id":"d8a5ed958d274c2e8ee717e6a4b0971d","js_sdk_data":{}}}"""
+    val response = transport.post(
+        "https://clienttoken.spotify.com/v1/clienttoken",
+        mapOf("Accept" to "application/json"),
+        body,
+    )
+    return com.example.musicx.spotify.auth.parseClientToken(response).getOrThrow()
 }
