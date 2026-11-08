@@ -158,17 +158,39 @@ fun BrowseScreen(
 }
 
 @Composable
-fun LibraryScreen() {
+fun LibraryScreen(
+    tracks: List<CatalogItem.Track>,
+    isLoading: Boolean,
+    hasPermission: Boolean,
+    onRequestPermission: () -> Unit,
+    onTrackSelected: (CatalogItem.Track) -> Unit,
+) {
     Column(
         Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text("Your Library", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onBackground)
-        Text("Local library is not available in Milestone 1.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(
-            "Use Home or Search to browse public YouTube Music catalog results.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        when {
+            !hasPermission -> {
+                Text("Musicx needs permission to access your audio files.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Button(onClick = onRequestPermission) { Text("Grant access") }
+            }
+            isLoading -> {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(Modifier.size(22.dp))
+                    Text("Scanning local audio…", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            tracks.isEmpty() -> {
+                Text("No audio files found on this device.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            else -> {
+                Text("${tracks.size} tracks", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                tracks.forEach { track ->
+                    CatalogRow(track) { onTrackSelected(track) }
+                }
+            }
+        }
     }
 }
 

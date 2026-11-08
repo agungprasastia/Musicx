@@ -3,10 +3,12 @@ package com.example.musicx.playback
 import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
+import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -45,10 +47,24 @@ data class PlaybackUiState(
     val positionMs: Long = 0L,
     val durationMs: Long = 0L,
     val errorMessage: String? = null,
+    val speed: Float = 1.0f,
+    val skipSilence: Boolean = false,
+    val sleepTimerRemainingMs: Long? = null,
 ) {
     val isPlaying: Boolean get() = status == PlaybackStatus.PLAYING
     val hasNext: Boolean get() = currentIndex >= 0 && currentIndex < queue.lastIndex
     val hasPrevious: Boolean get() = currentIndex > 0
+
+    companion object {
+        val SPEED_OPTIONS = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f)
+        val SLEEP_TIMER_PRESETS_MS = listOf(
+            15L * 60_000,  // 15 min
+            30L * 60_000,  // 30 min
+            45L * 60_000,  // 45 min
+            60L * 60_000,  // 1 hour
+            90L * 60_000,  // 1.5 hours
+        )
+    }
 }
 
 /**
@@ -78,6 +94,10 @@ class PlaybackController(
     private var resolveJob: Job? = null
     private var pendingPlay: CatalogItem.Track? = null
     private val pendingEnqueues = mutableListOf<CatalogItem.Track>()
+    private var sleepTimerJob: Job? = null
+    private var speed = 1.0f
+    private var skipSilence = false
+    private var sleepTimerRemainingMs: Long? = null
 
     private val playerListener = object : Player.Listener {
         override fun onEvents(player: Player, events: Player.Events) {
@@ -95,6 +115,7 @@ class PlaybackController(
                         return@addListener
                     }
                     controller = connected
+                    speed = connected.playbackParameters.speed
                     connected.addListener(playerListener)
                     publishFromPlayer()
                     flushPendingCommands()
@@ -266,10 +287,55 @@ class PlaybackController(
         publishFromPlayer()
     }
 
+    fun setSpeed(value: Float) {
+        val player = controller ?: return
+        speed = value.coerceIn(0.25f, 3.0f)
+        player.playbackParameters = PlaybackParameters(speed)
+        publish(_state.value)
+    }
+
+    fun setSkipSilence(enabled: Boolean) {
+        val player = controller ?: return
+        val args = android.os.Bundle().apply { putBoolean(PlaybackService.EXTRA_ENABLED, enabled) }
+        player.sendCustomCommand(PlaybackService.SKIP_SILENCE_COMMAND, args)
+        skipSilence = enabled
+        publish(_state.value)
+    }
+
+    // ponytail: timer lives in this controller's scope, so it dies with the UI.
+    // Move into PlaybackService if the timer must survive Activity destruction.
+    fun startSleepTimer(durationMs: Long) {
+        if (durationMs <= 0) return
+        cancelSleepTimer()
+        val deadline = SystemClock.elapsedRealtime() + durationMs
+        sleepTimerJob = scope.launch {
+            while (isActive) {
+                val remaining = deadline - SystemClock.elapsedRealtime()
+                if (remaining <= 0) break
+                sleepTimerRemainingMs = remaining
+                publish(_state.value)
+                delay(minOf(1_000L, remaining))
+            }
+            sleepTimerJob = null
+            sleepTimerRemainingMs = null
+            controller?.pause()
+            publish(_state.value)
+            publishFromPlayer()
+        }
+    }
+
+    fun cancelSleepTimer() {
+        sleepTimerJob?.cancel()
+        sleepTimerJob = null
+        sleepTimerRemainingMs = null
+        publish(_state.value)
+    }
+
     fun release() {
         if (released) return
         released = true
         resolveJob?.cancel()
+        sleepTimerJob?.cancel()
         scope.cancel()
         pendingPlay = null
         pendingEnqueues.clear()
@@ -342,7 +408,8 @@ class PlaybackController(
     }
 
     private fun publish(next: PlaybackUiState) {
-        if (_state.value != next) _state.value = next
+        val stamped = next.copy(speed = speed, skipSilence = skipSilence, sleepTimerRemainingMs = sleepTimerRemainingMs)
+        if (_state.value != stamped) _state.value = stamped
     }
 
     private fun CatalogItem.Track.toMediaItem(stream: ResolvedStream): MediaItem {

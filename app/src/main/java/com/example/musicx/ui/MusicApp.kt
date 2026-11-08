@@ -45,6 +45,8 @@ import com.example.musicx.catalog.youtube.OkHttpInnerTubeTransport
 import com.example.musicx.catalog.youtube.YouTubeMusicRepository
 import com.example.musicx.core.model.CatalogFilter
 import com.example.musicx.core.model.CatalogItem
+import com.example.musicx.local.LocalAwareStreamResolver
+import com.example.musicx.local.LocalLibraryRepository
 import com.example.musicx.playback.PlaybackController
 import com.example.musicx.playback.PlaybackStatus
 import com.example.musicx.playback.PlaybackUiState
@@ -133,6 +135,20 @@ fun MusicxApp(
             onSkipPrevious = playbackController::skipPrevious,
             onRetry = { playbackState.currentTrack?.let(playbackController::play) },
             onBack = { showNowPlaying = false },
+            onSetSpeed = playbackController::setSpeed,
+            onSetSkipSilence = playbackController::setSkipSilence,
+            onStartSleepTimer = playbackController::startSleepTimer,
+            onCancelSleepTimer = playbackController::cancelSleepTimer,
+            onOpenEqualizer = {
+                try {
+                    val eqIntent = android.content.Intent(android.media.audiofx.AudioEffect.ACTION_DISPLAY_AUDIO_EFFECT_CONTROL_PANEL).apply {
+                        putExtra(android.media.audiofx.AudioEffect.EXTRA_CONTENT_TYPE, android.media.audiofx.AudioEffect.CONTENT_TYPE_MUSIC)
+                    }
+                    context.startActivity(eqIntent)
+                } catch (_: android.content.ActivityNotFoundException) {
+                    android.widget.Toast.makeText(context, "No equalizer app is available on this device.", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            },
         )
 
         browseOrigin != null -> BrowseScreen(
@@ -197,7 +213,7 @@ fun MusicxApp(
                         onRetry = viewModel::retry
                     )
 
-                    MusicTab.Library -> LibraryScreen()
+                    MusicTab.Library -> LocalLibraryTab(onTrackSelected = onTrackSelected)
 
                     MusicTab.Spotify -> SpotifyTabContent(
                         state = spotifyUi,
@@ -216,6 +232,33 @@ fun MusicxApp(
             }
         }
     }
+}
+
+@Composable
+private fun LocalLibraryTab(onTrackSelected: (CatalogItem.Track) -> Unit) {
+    val context = LocalContext.current
+    val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        Manifest.permission.READ_MEDIA_AUDIO
+    } else {
+        Manifest.permission.READ_EXTERNAL_STORAGE
+    }
+    var hasPermission by remember {
+        mutableStateOf(ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED)
+    }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { hasPermission = it }
+    var tracks by remember { mutableStateOf<List<CatalogItem.Track>?>(null) }
+    LaunchedEffect(hasPermission) {
+        if (hasPermission) {
+            tracks = runCatching { LocalLibraryRepository(context.applicationContext).loadAll() }.getOrDefault(emptyList())
+        }
+    }
+    LibraryScreen(
+        tracks = tracks.orEmpty(),
+        isLoading = hasPermission && tracks == null,
+        hasPermission = hasPermission,
+        onRequestPermission = { launcher.launch(permission) },
+        onTrackSelected = onTrackSelected,
+    )
 }
 
 @Composable
@@ -315,8 +358,10 @@ private fun rememberDefaultPlaybackController(): PlaybackController {
     val controller = remember(context) {
         PlaybackController(
             context = context,
-            resolver = YouTubeStreamResolver(
-                InnerTubeYouTubePlayerClient(OkHttpInnerTubeTransport())
+            resolver = LocalAwareStreamResolver(
+                YouTubeStreamResolver(
+                    InnerTubeYouTubePlayerClient(OkHttpInnerTubeTransport())
+                )
             ),
         )
     }

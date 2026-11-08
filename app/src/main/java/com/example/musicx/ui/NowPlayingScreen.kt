@@ -6,6 +6,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,8 +17,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -41,6 +45,11 @@ fun NowPlayingScreen(
     onSkipPrevious: () -> Unit,
     onRetry: () -> Unit,
     onBack: () -> Unit,
+    onSetSpeed: (Float) -> Unit = {},
+    onSetSkipSilence: (Boolean) -> Unit = {},
+    onStartSleepTimer: (Long) -> Unit = {},
+    onCancelSleepTimer: () -> Unit = {},
+    onOpenEqualizer: () -> Unit = {},
 ) {
     val track = state.currentTrack
     var draggedPosition by remember(track?.id) { mutableStateOf<Float?>(null) }
@@ -90,6 +99,11 @@ fun NowPlayingScreen(
                 onSkipNext = onSkipNext,
                 onSkipPrevious = onSkipPrevious,
                 onRetry = onRetry,
+                onSetSpeed = onSetSpeed,
+                onSetSkipSilence = onSetSkipSilence,
+                onStartSleepTimer = onStartSleepTimer,
+                onCancelSleepTimer = onCancelSleepTimer,
+                onOpenEqualizer = onOpenEqualizer,
             )
         }
 
@@ -115,6 +129,11 @@ private fun TrackDetails(
     onSkipNext: () -> Unit,
     onSkipPrevious: () -> Unit,
     onRetry: () -> Unit,
+    onSetSpeed: (Float) -> Unit,
+    onSetSkipSilence: (Boolean) -> Unit,
+    onStartSleepTimer: (Long) -> Unit,
+    onCancelSleepTimer: () -> Unit,
+    onOpenEqualizer: () -> Unit,
 ) {
     Crossfade(targetState = track.id, animationSpec = tween(400), label = "artwork") { _ ->
         CatalogArtwork(track, Modifier.fillMaxWidth().aspectRatio(1f))
@@ -157,6 +176,17 @@ private fun TrackDetails(
         }
         TextButton(onClick = onRetry) { Text("Retry") }
     }
+
+    PlaybackControls(
+        speed = state.speed,
+        skipSilence = state.skipSilence,
+        sleepTimerRemainingMs = state.sleepTimerRemainingMs,
+        onSetSpeed = onSetSpeed,
+        onSetSkipSilence = onSetSkipSilence,
+        onStartSleepTimer = onStartSleepTimer,
+        onCancelSleepTimer = onCancelSleepTimer,
+        onOpenEqualizer = onOpenEqualizer,
+    )
 
     SectionHeading("Lyrics")
     Text(
@@ -228,4 +258,66 @@ private fun formatDuration(milliseconds: Long): String {
 private fun trackDynamicColor(track: CatalogItem.Track): Color {
     val hue = (track.id.hashCode() and 0x7FFFFFFF) % 360
     return Color.hsl(hue.toFloat(), 0.45f, 0.38f)
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun PlaybackControls(
+    speed: Float,
+    skipSilence: Boolean,
+    sleepTimerRemainingMs: Long?,
+    onSetSpeed: (Float) -> Unit,
+    onSetSkipSilence: (Boolean) -> Unit,
+    onStartSleepTimer: (Long) -> Unit,
+    onCancelSleepTimer: () -> Unit,
+    onOpenEqualizer: () -> Unit,
+) {
+    SectionHeading("Playback")
+
+    Text("Speed", style = MaterialTheme.typography.labelMedium)
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        PlaybackUiState.SPEED_OPTIONS.forEach { option ->
+            FilterChip(
+                selected = (speed - option).let { it > -0.01f && it < 0.01f },
+                onClick = { onSetSpeed(option) },
+                label = { Text("${option}x") },
+            )
+        }
+    }
+
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text("Skip silence", style = MaterialTheme.typography.labelMedium)
+        Switch(checked = skipSilence, onCheckedChange = onSetSkipSilence)
+    }
+
+    Text("Sleep timer", style = MaterialTheme.typography.labelMedium)
+    if (sleepTimerRemainingMs != null) {
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                "Stops in ${formatDuration(sleepTimerRemainingMs)}",
+                color = MaterialTheme.colorScheme.primary,
+            )
+            TextButton(onClick = onCancelSleepTimer) { Text("Cancel") }
+        }
+    } else {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            PlaybackUiState.SLEEP_TIMER_PRESETS_MS.forEach { preset ->
+                FilterChip(
+                    selected = false,
+                    onClick = { onStartSleepTimer(preset) },
+                    label = { Text("${preset / 60_000} min") },
+                )
+            }
+        }
+    }
+
+    TextButton(onClick = onOpenEqualizer) { Text("System Equalizer") }
 }

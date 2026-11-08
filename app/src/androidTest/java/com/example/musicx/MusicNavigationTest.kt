@@ -131,11 +131,21 @@ class MusicNavigationTest {
     }
 
     @Test
-    fun libraryShowsMilestoneScope() {
-        compose.setContent { LibraryScreen() }
+    fun libraryAsksForAudioPermission() {
+        var requested = false
+        compose.setContent {
+            LibraryScreen(
+                tracks = emptyList(),
+                isLoading = false,
+                hasPermission = false,
+                onRequestPermission = { requested = true },
+                onTrackSelected = {},
+            )
+        }
 
         compose.onNodeWithText("Your Library").assertIsDisplayed()
-        compose.onNodeWithText("Local library is not available in Milestone 1.").assertIsDisplayed()
+        compose.onNodeWithText("Grant access").performClick()
+        compose.runOnIdle { assertTrue(requested) }
     }
 
     @Test
