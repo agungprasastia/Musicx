@@ -4,9 +4,13 @@
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.2.10-purple.svg)](https://kotlinlang.org)
 [![Android](https://img.shields.io/badge/Android-API%2026%2B-green.svg)](https://developer.android.com)
 [![Compose](https://img.shields.io/badge/Jetpack%20Compose-Material%203-blue.svg)](https://developer.android.com/jetpack/compose)
+[![Status](https://img.shields.io/badge/Status-In%20Development-orange.svg)]()
 [![License](https://img.shields.io/badge/License-Apache%202.0-yellow.svg)](LICENSE)
 
-An open-source, private, and ad-free Android music player with an editorial dark aesthetic. Musicx streams from YouTube Music, scans local audio, synchronizes Spotify saved music, and scrobbles to ListenBrainz.
+> [!IMPORTANT]
+> **Status:** Musicx is currently in **active development (Work in Progress)** and has **not yet been officially released**. Public stable releases are not yet available.
+
+An open-source, private, and ad-free Android music player with an editorial dark aesthetic. Musicx streams from YouTube Music, synchronizes Spotify saved music, and scrobbles to ListenBrainz.
 
 ---
 
@@ -18,7 +22,6 @@ An open-source, private, and ad-free Android music player with an editorial dark
   - Sync playlists and liked songs.
   - Intelligent track matching with preview and review decisions.
   - Hierarchical navigation with seamless back navigation.
-- **Local Audio Library:** Scan and play tracks stored on your device with instant responsiveness.
 - **Editorial Dark UI:** Tactile dark canvas (`#0D0D0F`), deep surfaces (`#18181B`), warm copper accents, and edge-to-edge system bar integration.
 - **Background Playback & Lock-Screen Media:** Built on AndroidX Media3 `MediaSessionService` and `ExoPlayer` with rich notifications, transport controls, and lock-screen artwork.
 - **Playback Enhancements:** Variable playback speed, skip silence toggle, sleep timer, and system equalizer integration.
@@ -77,12 +80,15 @@ cd Musicx
 
 ```
 Musicx/
-├── .github/workflows/         # CI automation (lint, tests, build)
+├── .github/
+│   ├── workflows/             # CI automation (lint, tests, build)
+│   ├── ISSUE_TEMPLATE/        # Bug report and feature request templates
+│   └── PULL_REQUEST_TEMPLATE  # PR review checklist
 ├── app/
 │   ├── src/main/java/com/example/musicx/
 │   │   ├── catalog/           # YouTube Music InnerTube catalog client
 │   │   ├── playback/          # Media3 playback service and controller
-│   │   ├── playlist/          # Local playlist and storage repository
+│   │   ├── playlist/          # App playlist repository
 │   │   ├── scrobble/          # ListenBrainz scrobbling integration
 │   │   ├── spotify/           # Spotify auth, harvesting, and matching
 │   │   └── ui/                # Compose screens, components, and ViewModels
@@ -90,6 +96,7 @@ Musicx/
 ├── PRODUCT.md                 # Product specifications and constraints
 ├── DESIGN.md                  # Visual guidelines and design system
 ├── CONTRIBUTING.md            # Guidelines for contributors
+├── SECURITY.md                # Vulnerability reporting policy
 └── LICENSE                    # Apache 2.0 License
 ```
 

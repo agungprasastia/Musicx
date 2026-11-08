@@ -3,7 +3,7 @@
 <!-- impeccable:design-schema 1 -->
 
 ## Visual Authority & Aesthetic
-Derived from `.superpowers/brainstorm` (`editorial-home.html` and `now-playing.html`) and the `bitchord` reference player.
+Derived from `.superpowers/brainstorm` (`editorial-home.html` and `now-playing.html`).
 Mode: **Operate / Experience**
 Identity: **Editorial Dark** — High-contrast dark obsidian canvas, warm copper/terracotta primary accent, rich duotone bento gradients, prominent artwork, and tactile vector media controls.
 

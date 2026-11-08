@@ -10,10 +10,10 @@ android
 Android users seeking an ad-free music player with high craft, fast playback, and zero clutter.
 
 ## Product Purpose
-Musicx streams audio from YouTube Music, scans local device audio, and synchronizes Spotify saved music in an editorial dark listening environment.
+Musicx streams audio from YouTube Music and synchronizes Spotify saved music in an editorial dark listening environment.
 
 ## Positioning
-An open-source, private client uniting public streaming and local music files with a tactile editorial visual language.
+An open-source, private client uniting public streaming with a tactile editorial visual language.
 
 ## Operating Context
 Android 10+ devices with edge-to-edge rendering, 3-button or gesture navigation, portrait usage with docked miniplayer and bottom tab destinations.
@@ -22,7 +22,6 @@ Android 10+ devices with edge-to-edge rendering, 3-button or gesture navigation,
 - Full Edge-to-Edge system bar insets handling (transparent status & navigation bars)
 - Material 3 Jetpack Compose architecture
 - Unofficial YouTube Music catalog and streaming
-- Local audio library scanning
 - Spotify library sync and matching
 - Background playback and lockscreen media session controls
 - ListenBrainz scrobbling
@@ -30,6 +29,6 @@ Android 10+ devices with edge-to-edge rendering, 3-button or gesture navigation,
 - 126 unit tests must remain passing
 
 ## Brand Commitments
-- Visual authority: `.superpowers/brainstorm` (`editorial-home.html`, `now-playing.html`, and `bitchord` reference)
+- Visual authority: `.superpowers/brainstorm` (`editorial-home.html` and `now-playing.html`)
 - Aesthetic: Editorial dark canvas (`#0D0D0F`), deep surfaces (`#18181B`), warm copper/peach accent (`#E89B72` / `#DF8C64`)
 - Art-first Now Playing layout with prominent artwork, circular transport controls, and tabbed utilities
