@@ -13,8 +13,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,13 +25,13 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -86,8 +88,10 @@ fun NowPlayingScreen(
     Column(
         Modifier
             .fillMaxSize()
-            .background(if (track != null) trackAccent.copy(alpha = 0.12f) else MaterialTheme.colorScheme.background)
-            .padding(horizontal = 24.dp, vertical = 18.dp),
+            .background(MaterialTheme.colorScheme.background)
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .padding(horizontal = 22.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Top Bar
@@ -97,16 +101,29 @@ fun NowPlayingScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                modifier = Modifier.clickable(role = Role.Button, onClick = onBack),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable(role = Role.Button, onClick = onBack),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text(
-                    "⌄ NOW PLAYING",
-                    Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Row(
+                    Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = MusicIcons.ChevronDown,
+                        contentDescription = "Close player",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        "NOW PLAYING",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             // Mode Selector Tabs
@@ -114,13 +131,15 @@ fun NowPlayingScreen(
                 NowPlayingTab.entries.forEach { tab ->
                     val isSelected = selectedTab == tab
                     Surface(
-                        modifier = Modifier.clickable(role = Role.Tab) { selectedTab = tab },
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .clickable(role = Role.Tab) { selectedTab = tab },
                         color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
                         shape = RoundedCornerShape(10.dp)
                     ) {
                         Text(
                             tab.label,
-                            Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                            Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
                             color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -220,7 +239,7 @@ private fun PlayerView(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Hero Artwork
+        // Hero Artwork (Matching now-playing.html art-first)
         Box(
             Modifier
                 .fillMaxWidth(0.85f)
@@ -237,12 +256,12 @@ private fun PlayerView(
         Column(
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp),
+                .padding(horizontal = 6.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
                 track.title,
-                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold, fontSize = 24.sp),
+                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold, fontSize = 23.sp),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -265,7 +284,7 @@ private fun PlayerView(
             Text(
                 statusLine(state),
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f)
             )
         }
 
@@ -310,15 +329,20 @@ private fun PlayerView(
                 shape = CircleShape
             ) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("⏮", fontSize = 22.sp, color = if (state.hasPrevious) Color.White else Color.Gray)
+                    Icon(
+                        imageVector = MusicIcons.SkipPrevious,
+                        contentDescription = "Previous",
+                        tint = if (state.hasPrevious) Color.White else Color.Gray,
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
 
             // Big Play/Pause Center Button
             Surface(
                 modifier = Modifier
-                    .size(72.dp)
-                    .shadow(12.dp, CircleShape)
+                    .size(74.dp)
+                    .shadow(14.dp, CircleShape)
                     .clip(CircleShape)
                     .clickable(
                         enabled = state.status != PlaybackStatus.RESOLVING && state.status != PlaybackStatus.ERROR,
@@ -329,11 +353,11 @@ private fun PlayerView(
                 shape = CircleShape
             ) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        if (state.isPlaying) "⏸" else "▶",
-                        fontSize = 30.sp,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        fontWeight = FontWeight.Bold
+                    Icon(
+                        imageVector = if (state.isPlaying) MusicIcons.Pause else MusicIcons.Play,
+                        contentDescription = if (state.isPlaying) "Pause" else "Play",
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(32.dp)
                     )
                 }
             }
@@ -348,7 +372,12 @@ private fun PlayerView(
                 shape = CircleShape
             ) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("⏭", fontSize = 22.sp, color = if (state.hasNext) Color.White else Color.Gray)
+                    Icon(
+                        imageVector = MusicIcons.SkipNext,
+                        contentDescription = "Next",
+                        tint = if (state.hasNext) Color.White else Color.Gray,
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
         }
@@ -379,33 +408,61 @@ private fun PlayerView(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                modifier = Modifier.clickable(role = Role.Button, onClick = onOpenControls),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable(role = Role.Button, onClick = onOpenControls),
                 shape = RoundedCornerShape(10.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             ) {
                 Row(
                     Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("⚡ ${state.speed}x", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                    Icon(
+                        imageVector = MusicIcons.Speed,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text("${state.speed}x", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                     if (state.sleepTimerRemainingMs != null) {
-                        Text("· ⏱ ${formatDuration(state.sleepTimerRemainingMs)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                        Text("·", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(
+                            imageVector = MusicIcons.Timer,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Text(formatDuration(state.sleepTimerRemainingMs), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
 
             Surface(
-                modifier = Modifier.clickable(role = Role.Button, onClick = onOpenQueue),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable(role = Role.Button, onClick = onOpenQueue),
                 shape = RoundedCornerShape(10.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             ) {
-                Text(
-                    "☷ Queue (${state.queue.size})",
+                Row(
                     Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = MusicIcons.Queue,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        "Queue (${state.queue.size})",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
@@ -457,7 +514,7 @@ private fun QueueView(
                             Text(queued.artist, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         if (isCurrent) {
-                            Text("▶ Now", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                            Text("Now", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -487,7 +544,7 @@ private fun LyricsView(modifier: Modifier = Modifier) {
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
-                    "A lyrics provider has not been configured in this build. Synchronized lyrics from sources like LRCLIB or lrc.red can be added in a future milestone.",
+                    "A lyrics provider has not been configured in this build. Synchronized lyrics from sources like LRCLIB can be added in a future milestone.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -611,17 +668,6 @@ private fun ControlsView(
             Text("Launch System Equalizer", fontWeight = FontWeight.SemiBold)
         }
     }
-}
-
-private fun statusLabel(status: PlaybackStatus): String = when (status) {
-    PlaybackStatus.IDLE -> "IDLE"
-    PlaybackStatus.RESOLVING -> "RESOLVING"
-    PlaybackStatus.BUFFERING -> "BUFFERING"
-    PlaybackStatus.READY -> "READY"
-    PlaybackStatus.PLAYING -> "PLAYING"
-    PlaybackStatus.PAUSED -> "PAUSED"
-    PlaybackStatus.ENDED -> "ENDED"
-    PlaybackStatus.ERROR -> "ERROR"
 }
 
 private fun statusLine(state: PlaybackUiState): String = when (state.status) {

@@ -7,21 +7,34 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -192,56 +205,57 @@ fun MusicxApp(
         else -> Scaffold(
             modifier = Modifier.fillMaxSize(),
             containerColor = MaterialTheme.colorScheme.background,
+            contentWindowInsets = WindowInsets.statusBars,
             bottomBar = {
                 Column(
                     Modifier
                         .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.background)
+                        .background(MaterialTheme.colorScheme.surface)
                 ) {
                     MiniPlayer(
                         state = playbackState,
                         onOpen = { if (playbackState.currentTrack != null) showNowPlaying = true },
                         onPlayPause = playbackController::playPause,
                     )
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(68.dp)
-                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
-                            .padding(horizontal = 4.dp, vertical = 6.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
+                    NavigationBar(
+                        modifier = Modifier.fillMaxWidth(),
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                        windowInsets = WindowInsets.navigationBars,
                     ) {
                         MusicTab.entries.forEach { tab ->
                             val isSelected = selectedTab == tab
                             val icon = when (tab) {
-                                MusicTab.Home -> "⌂"
-                                MusicTab.Search -> "⌕"
-                                MusicTab.Library -> "♫"
-                                MusicTab.Spotify -> "●"
+                                MusicTab.Home -> MusicIcons.Home
+                                MusicTab.Search -> MusicIcons.Search
+                                MusicTab.Library -> MusicIcons.Library
+                                MusicTab.Spotify -> MusicIcons.Spotify
                             }
-                            Column(
-                                Modifier
-                                    .weight(1f)
-                                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
-                                    .clickable(role = Role.Tab) { selectedTab = tab }
-                                    .padding(vertical = 4.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(2.dp)
-                            ) {
-                                Text(
-                                    icon,
-                                    fontSize = 18.sp,
-                                    fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            NavigationBarItem(
+                                selected = isSelected,
+                                onClick = { selectedTab = tab },
+                                icon = {
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = tab.name,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                },
+                                label = {
+                                    Text(
+                                        tab.name,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                                Text(
-                                    tab.name,
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                                    fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            )
                         }
                     }
                 }
@@ -350,17 +364,19 @@ private fun MiniPlayer(
     onPlayPause: () -> Unit,
 ) {
     val track = state.currentTrack
-    androidx.compose.material3.Surface(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp)
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
             .clickable(enabled = track != null, onClick = onOpen)
             .semantics {
                 contentDescription = track?.let { "Open player: ${it.title}" } ?: "Nothing playing"
             },
         color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-        shadowElevation = 6.dp
+        shape = RoundedCornerShape(16.dp),
+        shadowElevation = 8.dp
     ) {
         Row(
             Modifier
@@ -377,12 +393,12 @@ private fun MiniPlayer(
                     style = MaterialTheme.typography.bodyMedium
                 )
             } else {
-                CatalogArtwork(track, Modifier.size(44.dp))
-                Column(Modifier.weight(1f)) {
+                CatalogArtwork(track, Modifier.size(46.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
                         track.title,
                         color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                        fontWeight = FontWeight.SemiBold,
                         style = MaterialTheme.typography.bodyMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -399,20 +415,20 @@ private fun MiniPlayer(
                     state.status != PlaybackStatus.ERROR &&
                     state.status != PlaybackStatus.IDLE
                 ) {
-                    androidx.compose.material3.Surface(
+                    Surface(
                         modifier = Modifier
                             .size(42.dp)
-                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .clip(CircleShape)
                             .clickable(onClick = onPlayPause),
                         color = MaterialTheme.colorScheme.primary,
-                        shape = androidx.compose.foundation.shape.CircleShape
+                        shape = CircleShape
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Text(
-                                if (state.isPlaying) "⏸" else "▶",
-                                fontSize = 16.sp,
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                            Icon(
+                                imageVector = if (state.isPlaying) MusicIcons.Pause else MusicIcons.Play,
+                                contentDescription = if (state.isPlaying) "Pause" else "Play",
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }

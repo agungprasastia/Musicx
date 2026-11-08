@@ -1,6 +1,7 @@
 package com.example.musicx.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -38,7 +40,7 @@ fun MusicArtwork(track: MusicSample, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .aspectRatio(1f)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(14.dp))
             .background(Brush.linearGradient(track.artworkColors.map(::Color)))
             .semantics { contentDescription = "Artwork: ${track.album}" }
     )
@@ -70,8 +72,8 @@ fun TrackRow(track: MusicSample, onClick: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            MusicArtwork(track, Modifier.size(54.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            MusicArtwork(track, Modifier.size(52.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(
                     track.title,
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
@@ -85,7 +87,12 @@ fun TrackRow(track: MusicSample, onClick: () -> Unit) {
                     maxLines = 1,
                 )
             }
-            Text("•••", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+            Icon(
+                imageVector = MusicIcons.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.size(18.dp)
+            )
         }
     }
 }
@@ -100,7 +107,7 @@ fun CatalogArtwork(item: CatalogItem, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .aspectRatio(1f)
-            .shadow(6.dp, RoundedCornerShape(14.dp), ambientColor = Color.Black, spotColor = Color.Black)
+            .shadow(8.dp, RoundedCornerShape(14.dp), ambientColor = Color.Black, spotColor = Color.Black)
             .clip(RoundedCornerShape(14.dp))
             .background(Brush.linearGradient(colors))
             .semantics { contentDescription = "Artwork: ${item.title}" }
@@ -118,9 +125,10 @@ fun CatalogRow(item: CatalogItem, onClick: () -> Unit) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(14.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
             .clickable(role = Role.Button, onClick = onClick),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.45f)
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
     ) {
         Row(
             modifier = Modifier
@@ -147,7 +155,7 @@ fun CatalogRow(item: CatalogItem, onClick: () -> Unit) {
             Text(
                 type,
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f)
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
             )
         }
     }
@@ -163,8 +171,8 @@ fun EditorialGridCard(
 ) {
     Box(
         modifier = modifier
-            .height(124.dp)
-            .shadow(8.dp, RoundedCornerShape(16.dp))
+            .height(128.dp)
+            .shadow(10.dp, RoundedCornerShape(16.dp))
             .clip(RoundedCornerShape(16.dp))
             .background(Brush.linearGradient(gradientColors))
             .clickable(role = Role.Button, onClick = onClick)
@@ -174,8 +182,8 @@ fun EditorialGridCard(
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
                 subtitle.uppercase(),
-                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp, fontSize = 10.sp),
-                color = Color.White.copy(alpha = 0.75f)
+                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.2.sp, fontSize = 10.sp),
+                color = Color.White.copy(alpha = 0.8f)
             )
             Text(
                 title,
@@ -197,28 +205,26 @@ fun MoodRowCard(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .height(82.dp)
+            .height(84.dp)
             .clip(RoundedCornerShape(16.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
             .clickable(role = Role.Button, onClick = onClick),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
         shape = RoundedCornerShape(16.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(14.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 Modifier
                     .size(46.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Brush.linearGradient(gradientColors)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("◉", color = Color.White.copy(alpha = 0.9f), fontSize = 18.sp)
-            }
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Brush.linearGradient(gradientColors))
+            )
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     title,
@@ -231,7 +237,12 @@ fun MoodRowCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Text("›", fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(
+                imageVector = MusicIcons.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }

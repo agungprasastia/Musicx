@@ -1,12 +1,15 @@
 package com.example.musicx.ui
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -17,6 +20,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -28,6 +33,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
@@ -64,7 +70,7 @@ fun HomeScreen(
         Modifier
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 20.dp),
+            .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(22.dp)
     ) {
         Row(
@@ -72,37 +78,43 @@ fun HomeScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                "GOOD EVENING",
-                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.5.sp, fontSize = 11.sp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    "GOOD EVENING",
+                    style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.5.sp, fontSize = 11.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    "Made for you",
+                    style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold, fontSize = 30.sp),
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            }
             Surface(
                 modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
                     .clickable(role = Role.Button, onClick = onOpenSettings),
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text(
-                    "⚙ Settings",
-                    Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = MusicIcons.Settings,
+                        contentDescription = "Settings",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        "Settings",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
             }
-        }
-
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                "Made for you",
-                style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold, fontSize = 32.sp),
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Text(
-                "Browse public YouTube Music collections. Guest access only; no account required.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
 
         // 2x2 Bento Editorial Grid matching editorial-home.html
@@ -159,9 +171,9 @@ fun HomeScreen(
         }
 
         Text(
-            "YouTube Music integration is unofficial and may stop working when the service changes.",
+            "YouTube Music guest catalog access. No account required.",
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f)
         )
     }
 }
@@ -181,7 +193,7 @@ fun SearchScreen(
         Modifier
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 20.dp),
+            .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         Text(
@@ -200,7 +212,14 @@ fun SearchScreen(
                 .fillMaxWidth()
                 .testTag("search-input"),
             placeholder = { Text("Search songs, albums, artists") },
-            leadingIcon = { Text("⌕", fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) },
+            leadingIcon = {
+                Icon(
+                    imageVector = MusicIcons.Search,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
+            },
             trailingIcon = {
                 if (query.isNotEmpty()) {
                     Text(
@@ -296,13 +315,17 @@ fun BrowseScreen(
     Column(
         Modifier
             .fillMaxWidth()
+            .statusBarsPadding()
+            .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 20.dp),
+            .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         Surface(
-            modifier = Modifier.clickable(role = Role.Button, onClick = onBack),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+            modifier = Modifier
+                .clip(RoundedCornerShape(12.dp))
+                .clickable(role = Role.Button, onClick = onBack),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
             shape = RoundedCornerShape(12.dp)
         ) {
             Text(
@@ -340,7 +363,7 @@ fun LibraryScreen(
         Modifier
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 20.dp),
+            .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         Text(
@@ -404,7 +427,7 @@ fun LibraryScreen(
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     tracks.forEach { track ->
                         CatalogRow(track) { onTrackSelected(track) }
                     }
@@ -453,7 +476,7 @@ private fun CatalogStateContent(
             }
         }
 
-        is CatalogUiState.Results -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        is CatalogUiState.Results -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             state.title?.let { SectionHeading(it) }
             state.items.forEach { item ->
                 CatalogRow(item) { onItemSelected(item) }
