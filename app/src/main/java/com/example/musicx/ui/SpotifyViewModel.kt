@@ -115,7 +115,7 @@ class SpotifyViewModel(
     fun matchTrack(track: SpotifyTrack): Job {
         currentJob?.cancel()
         val job = viewModelScope.launch {
-            _ui.value = SpotifyUiState.Matching(track, "Searching YouTube Music…")
+            _ui.value = SpotifyUiState.Matching(track, "Matching track…")
             try {
                 val query = "${track.title} ${track.artistLine}"
                 val searchResult = catalogRepository.search(query, CatalogFilter.SONGS)

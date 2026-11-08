@@ -7,9 +7,9 @@ import androidx.compose.ui.graphics.Color
 
 private val MusicxColorScheme = darkColorScheme(
     primary = MusicxAccent,
-    onPrimary = Color(0xFF1C0F08),
-    primaryContainer = Color(0xFF3B2217),
-    onPrimaryContainer = Color(0xFFFFDBCF),
+    onPrimary = Color.Black,
+    primaryContainer = Color(0xFF1B3824),
+    onPrimaryContainer = Color(0xFFB8F5CD),
     secondary = MusicxMuted,
     onSecondary = MusicxText,
     secondaryContainer = MusicxSurfaceVariant,

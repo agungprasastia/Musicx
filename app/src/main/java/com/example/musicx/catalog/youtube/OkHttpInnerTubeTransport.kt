@@ -69,7 +69,6 @@ class OkHttpInnerTubeTransport(
 
             override fun onResponse(call: Call, response: Response) {
                 if (continuation.isActive) {
-                    continuation.invokeOnCancellation { response.close() }
                     continuation.resume(response)
                 } else {
                     response.close()

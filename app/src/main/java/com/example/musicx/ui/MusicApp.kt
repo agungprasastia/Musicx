@@ -373,38 +373,31 @@ private fun MiniPlayer(
     onOpen: () -> Unit,
     onPlayPause: () -> Unit,
 ) {
-    val track = state.currentTrack
+    val track = state.currentTrack ?: return
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 6.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
-            .clickable(enabled = track != null, onClick = onOpen)
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onOpen)
             .semantics {
-                contentDescription = track?.let { "Open player: ${it.title}" } ?: "Nothing playing"
+                contentDescription = "Open player: ${track.title}"
             },
         color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = RoundedCornerShape(16.dp),
-        shadowElevation = 8.dp
+        shape = RoundedCornerShape(8.dp),
+        shadowElevation = 6.dp
     ) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .height(64.dp)
-                .padding(horizontal = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (track == null) {
-                Text(
-                    "Nothing playing",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            } else {
-                CatalogArtwork(track, Modifier.size(46.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(Modifier.fillMaxWidth()) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .padding(horizontal = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CatalogArtwork(track, Modifier.size(42.dp), cornerRadius = 4.dp)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
                     Text(
                         track.title,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -415,34 +408,49 @@ private fun MiniPlayer(
                     )
                     Text(
                         miniPlayerStatus(state),
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                if (state.status != PlaybackStatus.RESOLVING &&
-                    state.status != PlaybackStatus.ERROR &&
-                    state.status != PlaybackStatus.IDLE
-                ) {
-                    Surface(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(CircleShape)
-                            .clickable(onClick = onPlayPause),
-                        color = MaterialTheme.colorScheme.primary,
-                        shape = CircleShape
+
+                if (state.status == PlaybackStatus.RESOLVING) {
+                    androidx.compose.material3.CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                } else {
+                    androidx.compose.material3.IconButton(
+                        onClick = onPlayPause,
+                        modifier = Modifier.size(36.dp)
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = if (state.isPlaying) MusicIcons.Pause else MusicIcons.Play,
-                                contentDescription = if (state.isPlaying) "Pause" else "Play",
-                                tint = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
+                        Icon(
+                            imageVector = if (state.isPlaying) MusicIcons.Pause else MusicIcons.Play,
+                            contentDescription = if (state.isPlaying) "Pause" else "Play",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(22.dp)
+                        )
                     }
                 }
+            }
+
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(2.dp)
+                    .background(androidx.compose.ui.graphics.Color.White.copy(alpha = 0.12f))
+            ) {
+                val progress = if (state.durationMs > 0) {
+                    (state.positionMs.toFloat() / state.durationMs.toFloat()).coerceIn(0f, 1f)
+                } else 0f
+                Box(
+                    Modifier
+                        .fillMaxWidth(progress)
+                        .height(2.dp)
+                        .background(MaterialTheme.colorScheme.primary)
+                )
             }
         }
     }

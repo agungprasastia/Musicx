@@ -44,6 +44,22 @@ class InnerTubeYouTubePlayerClient(
                 version = clientVersion,
             ),
             ClientIdentity(
+                name = "ANDROID",
+                version = "21.26.364",
+                osName = "Android",
+                osVersion = "15",
+                deviceMake = "Google",
+                deviceModel = "Pixel 9 Pro",
+            ),
+            ClientIdentity(
+                name = "IOS",
+                version = "21.26.4",
+                osName = "iOS",
+                osVersion = "18.3.2",
+                deviceMake = "Apple",
+                deviceModel = "iPhone16,2",
+            ),
+            ClientIdentity(
                 name = "VISIONOS",
                 version = "1.02",
                 osName = "VISION_OS",
@@ -57,13 +73,6 @@ class InnerTubeYouTubePlayerClient(
                 deviceMake = "Oculus",
                 deviceModel = "Quest 3",
             ),
-            ClientIdentity(
-                name = "IOS",
-                version = "21.26.4",
-                osName = "iOS",
-                deviceMake = "Apple",
-                deviceModel = "iPhone16,2",
-            ),
         )
 
         var lastError: Throwable? = null
@@ -74,7 +83,8 @@ class InnerTubeYouTubePlayerClient(
             val result = transport.post("player", body)
             if (result.isSuccess) {
                 val raw = result.getOrThrow()
-                if (hasDirectAudioStream(raw)) {
+                val hasStream = hasDirectAudioStream(raw)
+                if (hasStream) {
                     return Result.success(raw)
                 }
                 if (fallbackResponse == null) {
@@ -100,6 +110,7 @@ class InnerTubeYouTubePlayerClient(
                 put("clientName", client.name)
                 put("clientVersion", client.version)
                 client.osName?.let { put("osName", it) }
+                client.osVersion?.let { put("osVersion", it) }
                 client.deviceMake?.let { put("deviceMake", it) }
                 client.deviceModel?.let { put("deviceModel", it) }
                 put("hl", "en")
@@ -140,6 +151,7 @@ class InnerTubeYouTubePlayerClient(
         val name: String,
         val version: String,
         val osName: String? = null,
+        val osVersion: String? = null,
         val deviceMake: String? = null,
         val deviceModel: String? = null,
     )

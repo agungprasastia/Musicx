@@ -7,7 +7,7 @@ data class MusicSample(
     val album: String,
     val durationLabel: String,
     val artworkColors: List<Long>,
-    val artworkUrl: String? = "https://i.ytimg.com/vi/$id/hqdefault.jpg"
+    val artworkUrl: String? = "https://i.ytimg.com/vi/$id/mqdefault.jpg"
 )
 
 object MusicSamples {
