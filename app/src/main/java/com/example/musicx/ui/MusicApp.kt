@@ -63,8 +63,6 @@ import com.example.musicx.catalog.youtube.OkHttpInnerTubeTransport
 import com.example.musicx.catalog.youtube.YouTubeMusicRepository
 import com.example.musicx.core.model.CatalogFilter
 import com.example.musicx.core.model.CatalogItem
-import com.example.musicx.local.LocalAwareStreamResolver
-import com.example.musicx.local.LocalLibraryRepository
 import com.example.musicx.scrobble.ListenBrainzClient
 import com.example.musicx.scrobble.ListenBrainzScrobbler
 import com.example.musicx.scrobble.ListenBrainzTokenStore
@@ -73,6 +71,7 @@ import com.example.musicx.playback.PlaybackStatus
 import com.example.musicx.playback.PlaybackUiState
 import com.example.musicx.playback.resolver.InnerTubeYouTubePlayerClient
 import com.example.musicx.playback.resolver.YouTubeStreamResolver
+import com.example.musicx.playlist.PlaylistRepository
 import com.example.musicx.spotify.SpotifyRepository
 import com.example.musicx.spotify.auth.EncryptedSpotifySecretStore
 import com.example.musicx.spotify.auth.SpotifyClientToken
@@ -92,6 +91,8 @@ fun MusicxApp(
     val playbackState by playbackController.state.collectAsState()
     val spotifyUi by spotifyViewModel.ui.collectAsState()
     val context = LocalContext.current
+    val playlistRepo = remember(context) { PlaylistRepository(context) }
+    var showSpotifyImport by rememberSaveable { mutableStateOf(false) }
     val notificationPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { }
@@ -192,6 +193,7 @@ fun MusicxApp(
                     android.widget.Toast.makeText(context, "No equalizer app is available on this device.", android.widget.Toast.LENGTH_SHORT).show()
                 }
             },
+            playlistRepo = playlistRepo,
         )
 
         else -> Scaffold(
@@ -220,8 +222,7 @@ fun MusicxApp(
                             val icon = when (tab) {
                                 MusicTab.Home -> MusicIcons.Home
                                 MusicTab.Search -> MusicIcons.Search
-                                MusicTab.Library -> MusicIcons.Library
-                                MusicTab.Spotify -> MusicIcons.Spotify
+                                MusicTab.Playlists -> MusicIcons.Library
                             }
                             NavigationBarItem(
                                 selected = isSelected,
@@ -294,53 +295,61 @@ fun MusicxApp(
                             onRetry = viewModel::retry
                         )
 
-                        MusicTab.Library -> LocalLibraryTab(onTrackSelected = onTrackSelected)
-
-                        MusicTab.Spotify -> SpotifyTabContent(
-                            state = spotifyUi,
-                            onLogin = { showSpotifyLogin = true },
-                            onDisconnect = spotifyViewModel::disconnect,
-                            onPlaylistSelected = spotifyViewModel::loadPlaylistTracks,
-                            onTrackSelected = { track -> spotifyViewModel.matchTrack(track) },
-                            onPlayMatched = { catalogTrack ->
-                                playbackController.play(catalogTrack)
-                                showNowPlaying = true
-                            },
-                            onRetry = spotifyViewModel::loadLibrary,
-                            onBack = spotifyViewModel::loadLibrary,
-                        )
+                        MusicTab.Playlists -> {
+                            if (showSpotifyImport) {
+                                Column(Modifier.fillMaxSize()) {
+                                    Row(
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 20.dp, vertical = 12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        Surface(
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .clip(CircleShape)
+                                                .clickable { showSpotifyImport = false },
+                                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                            shape = CircleShape
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Text("←", color = MaterialTheme.colorScheme.onSurface, fontSize = 18.sp)
+                                            }
+                                        }
+                                        Text(
+                                            "Spotify Import",
+                                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                            color = MaterialTheme.colorScheme.onBackground
+                                        )
+                                    }
+                                    SpotifyTabContent(
+                                        state = spotifyUi,
+                                        onLogin = { showSpotifyLogin = true },
+                                        onDisconnect = spotifyViewModel::disconnect,
+                                        onPlaylistSelected = spotifyViewModel::loadPlaylistTracks,
+                                        onTrackSelected = { track -> spotifyViewModel.matchTrack(track) },
+                                        onPlayMatched = { catalogTrack ->
+                                            playbackController.play(catalogTrack)
+                                            showNowPlaying = true
+                                        },
+                                        onRetry = spotifyViewModel::loadLibrary,
+                                        onBack = { showSpotifyImport = false },
+                                    )
+                                }
+                            } else {
+                                LibraryPlaylistsTab(
+                                    playlistRepo = playlistRepo,
+                                    onTrackSelected = onTrackSelected,
+                                    onOpenSpotify = { showSpotifyImport = true }
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
     }
-}
-
-@Composable
-private fun LocalLibraryTab(onTrackSelected: (CatalogItem.Track) -> Unit) {
-    val context = LocalContext.current
-    val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        Manifest.permission.READ_MEDIA_AUDIO
-    } else {
-        Manifest.permission.READ_EXTERNAL_STORAGE
-    }
-    var hasPermission by remember {
-        mutableStateOf(ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED)
-    }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { hasPermission = it }
-    var tracks by remember { mutableStateOf<List<CatalogItem.Track>?>(null) }
-    LaunchedEffect(hasPermission) {
-        if (hasPermission) {
-            tracks = runCatching { LocalLibraryRepository(context.applicationContext).loadAll() }.getOrDefault(emptyList())
-        }
-    }
-    LibraryScreen(
-        tracks = tracks.orEmpty(),
-        isLoading = hasPermission && tracks == null,
-        hasPermission = hasPermission,
-        onRequestPermission = { launcher.launch(permission) },
-        onTrackSelected = onTrackSelected,
-    )
 }
 
 @Composable
@@ -476,10 +485,8 @@ private fun rememberDefaultPlaybackController(): PlaybackController {
     val controller = remember(context) {
         PlaybackController(
             context = context,
-            resolver = LocalAwareStreamResolver(
-                YouTubeStreamResolver(
-                    InnerTubeYouTubePlayerClient(OkHttpInnerTubeTransport())
-                )
+            resolver = YouTubeStreamResolver(
+                InnerTubeYouTubePlayerClient(OkHttpInnerTubeTransport())
             ),
         )
     }

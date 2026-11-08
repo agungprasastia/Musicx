@@ -59,7 +59,7 @@ import com.example.musicx.core.model.CatalogItem
 import com.example.musicx.data.MusicSamples
 import kotlinx.coroutines.delay
 
-enum class MusicTab { Home, Search, Library, Spotify }
+enum class MusicTab { Home, Search, Playlists }
 
 private data class BrowseCollection(
     val title: String,
@@ -545,92 +545,6 @@ fun BrowseScreen(
             },
             idleText = "Choose a collection to browse."
         )
-    }
-}
-
-@Composable
-fun LibraryScreen(
-    tracks: List<CatalogItem.Track>,
-    isLoading: Boolean,
-    hasPermission: Boolean,
-    onRequestPermission: () -> Unit,
-    onTrackSelected: (CatalogItem.Track) -> Unit,
-) {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
-    ) {
-        Text(
-            "Your Library",
-            style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
-            color = MaterialTheme.colorScheme.onBackground
-        )
-        when {
-            !hasPermission -> {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
-                ) {
-                    Column(
-                        Modifier.padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        Text(
-                            "Local Audio Access",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                        )
-                        Text(
-                            "Musicx needs permission to scan and play audio files stored on your device storage.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Button(
-                            onClick = onRequestPermission,
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text("Grant access")
-                        }
-                    }
-                }
-            }
-            isLoading -> {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CircularProgressIndicator(Modifier.size(24.dp))
-                    Text("Scanning local audio…", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-            tracks.isEmpty() -> {
-                Text(
-                    "No audio files found on this device.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            else -> {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        "${tracks.size} tracks found",
-                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    tracks.forEach { track ->
-                        CatalogRow(track) { onTrackSelected(track) }
-                    }
-                }
-            }
-        }
     }
 }
 

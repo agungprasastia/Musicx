@@ -49,15 +49,12 @@ class SpotifyWebTokenHarvester(private val context: Context) {
         private const val TOKEN_PATH = "/get_access_token"
 
         val LOGIN_ALLOWED_HOSTS = setOf(
-            "accounts.spotify.com",
-            "open.spotify.com",
-            "www.spotify.com",
-            "login.spotify.com",
-            "challenge.spotify.com",
+            "spotify.com",
+            "scdn.co",
+            "spotifycdn.com",
             "accounts.google.com",
             "appleid.apple.com",
-            "www.facebook.com",
-            "m.facebook.com",
+            "facebook.com",
         )
     }
 

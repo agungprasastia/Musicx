@@ -25,6 +25,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
@@ -32,12 +33,15 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,6 +61,7 @@ import androidx.compose.ui.unit.sp
 import com.example.musicx.core.model.CatalogItem
 import com.example.musicx.playback.PlaybackStatus
 import com.example.musicx.playback.PlaybackUiState
+import com.example.musicx.playlist.PlaylistRepository
 
 @Composable
 fun NowPlayingScreen(
@@ -72,11 +77,17 @@ fun NowPlayingScreen(
     onStartSleepTimer: (Long) -> Unit = {},
     onCancelSleepTimer: () -> Unit = {},
     onOpenEqualizer: () -> Unit = {},
+    playlistRepo: PlaylistRepository? = null,
 ) {
     val track = state.currentTrack
     var showQueue by rememberSaveable { mutableStateOf(false) }
     var showSettingsDialog by rememberSaveable { mutableStateOf(false) }
-    var isFavorite by rememberSaveable(track?.id) { mutableStateOf(false) }
+    var showAddToPlaylistDialog by rememberSaveable { mutableStateOf(false) }
+    var showNewPlaylistPrompt by rememberSaveable { mutableStateOf(false) }
+
+    val likedTracks by playlistRepo?.likedTracks?.collectAsState() ?: remember { mutableStateOf(emptyList()) }
+    val playlists by playlistRepo?.playlists?.collectAsState() ?: remember { mutableStateOf(emptyList()) }
+    val isFavorite = track != null && likedTracks.any { it.id == track.id }
     var isShuffle by rememberSaveable { mutableStateOf(false) }
     var isRepeat by rememberSaveable { mutableStateOf(false) }
 
@@ -230,21 +241,47 @@ fun NowPlayingScreen(
                         )
                     }
 
-                    Surface(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .clickable(role = Role.Button, onClick = { isFavorite = !isFavorite }),
-                        color = Color.Transparent,
-                        shape = CircleShape
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = MusicIcons.Heart,
-                                contentDescription = if (isFavorite) "Liked" else "Like",
-                                tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(24.dp)
-                            )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .clickable(role = Role.Button, onClick = {
+                                    if (track != null) playlistRepo?.toggleLike(track)
+                                }),
+                            color = Color.Transparent,
+                            shape = CircleShape
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = MusicIcons.Heart,
+                                    contentDescription = if (isFavorite) "Liked" else "Like",
+                                    tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        }
+
+                        if (playlistRepo != null && track != null) {
+                            Surface(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .clickable(role = Role.Button, onClick = {
+                                        showAddToPlaylistDialog = true
+                                    }),
+                                color = Color.Transparent,
+                                shape = CircleShape
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = MusicIcons.Plus,
+                                        contentDescription = "Add to playlist",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -490,6 +527,124 @@ fun NowPlayingScreen(
                 }
             }
         }
+    }
+
+    if (showAddToPlaylistDialog && track != null && playlistRepo != null) {
+        AlertDialog(
+            onDismissRequest = { showAddToPlaylistDialog = false },
+            title = { Text("Add to Playlist") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                showAddToPlaylistDialog = false
+                                showNewPlaylistPrompt = true
+                            }
+                            .padding(vertical = 8.dp),
+                        color = Color.Transparent
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = MusicIcons.Plus,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                "New playlist",
+                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
+                    if (playlists.isEmpty()) {
+                        Text(
+                            "No custom playlists yet.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        playlists.forEach { pl ->
+                            val alreadyIn = pl.tracks.any { it.id == track.id }
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        playlistRepo.addTrackToPlaylist(pl.id, track)
+                                        showAddToPlaylistDialog = false
+                                    }
+                                    .padding(vertical = 8.dp),
+                                color = Color.Transparent
+                            ) {
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        pl.name,
+                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    if (alreadyIn) {
+                                        Text(
+                                            "Added",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showAddToPlaylistDialog = false }) {
+                    Text("Close")
+                }
+            }
+        )
+    }
+
+    if (showNewPlaylistPrompt && track != null && playlistRepo != null) {
+        var newName by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showNewPlaylistPrompt = false },
+            title = { Text("New Playlist") },
+            text = {
+                OutlinedTextField(
+                    value = newName,
+                    onValueChange = { newName = it },
+                    placeholder = { Text("My Playlist #${playlists.size + 1}") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val created = playlistRepo.createPlaylist(newName)
+                        playlistRepo.addTrackToPlaylist(created.id, track)
+                        showNewPlaylistPrompt = false
+                    }
+                ) {
+                    Text("Create & Add")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showNewPlaylistPrompt = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 

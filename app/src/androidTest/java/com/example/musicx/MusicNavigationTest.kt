@@ -13,7 +13,6 @@ import com.example.musicx.core.model.CatalogFilter
 import com.example.musicx.core.model.CatalogItem
 import com.example.musicx.ui.CatalogUiState
 import com.example.musicx.ui.HomeScreen
-import com.example.musicx.ui.LibraryScreen
 import com.example.musicx.ui.MusicViewModel
 import com.example.musicx.ui.MusicxApp
 import com.example.musicx.ui.SearchScreen
@@ -131,24 +130,6 @@ class MusicNavigationTest {
     }
 
     @Test
-    fun libraryAsksForAudioPermission() {
-        var requested = false
-        compose.setContent {
-            LibraryScreen(
-                tracks = emptyList(),
-                isLoading = false,
-                hasPermission = false,
-                onRequestPermission = { requested = true },
-                onTrackSelected = {},
-            )
-        }
-
-        compose.onNodeWithText("Your Library").assertIsDisplayed()
-        compose.onNodeWithText("Grant access").performClick()
-        compose.runOnIdle { assertTrue(requested) }
-    }
-
-    @Test
     fun bottomNavigationKeepsPlayerPlaceholderVisible() {
         val model = MusicViewModel(FakeRepository())
         compose.setContent { MusicxApp(viewModel = model) }
@@ -156,8 +137,8 @@ class MusicNavigationTest {
         compose.onNodeWithContentDescription("Nothing playing").assertIsDisplayed()
         compose.onNodeWithText("Search").performClick()
         compose.onNodeWithText("Find your next favorite").assertIsDisplayed()
-        compose.onNodeWithText("Library").performClick()
-        compose.onNodeWithText("Your Library").assertIsDisplayed()
+        compose.onNodeWithText("Playlists").performClick()
+        compose.onNodeWithText("Liked Songs").assertIsDisplayed()
         compose.onNodeWithText("Home").performClick()
         compose.onNodeWithText("Charts").assertIsDisplayed()
     }

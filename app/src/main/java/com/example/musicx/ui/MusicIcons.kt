@@ -445,4 +445,42 @@ object MusicIcons {
             }
         }.build()
     }
+
+    val Plus: ImageVector by lazy {
+        ImageVector.Builder(
+            name = "ic_plus",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f
+        ).apply {
+            path(stroke = stroke, strokeLineWidth = 2.2f, strokeLineCap = StrokeCap.Round) {
+                moveTo(12f, 5f); lineTo(12f, 19f)
+                moveTo(5f, 12f); lineTo(19f, 12f)
+            }
+        }.build()
+    }
+
+    val Trash: ImageVector by lazy {
+        ImageVector.Builder(
+            name = "ic_trash",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f
+        ).apply {
+            path(stroke = stroke, strokeLineWidth = 2f, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+                moveTo(4f, 7f); lineTo(20f, 7f)
+                moveTo(10f, 11f); lineTo(10f, 17f)
+                moveTo(14f, 11f); lineTo(14f, 17f)
+                moveTo(5f, 7f); lineTo(6f, 19f)
+                quadTo(6f, 20f, 7f, 20f)
+                lineTo(17f, 20f)
+                quadTo(18f, 20f, 18f, 19f)
+                lineTo(19f, 7f)
+                moveTo(9f, 7f); lineTo(9f, 4f)
+                lineTo(15f, 4f); lineTo(15f, 7f)
+            }
+        }.build()
+    }
 }
