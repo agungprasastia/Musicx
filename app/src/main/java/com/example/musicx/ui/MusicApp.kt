@@ -194,14 +194,6 @@ fun MusicxApp(
             },
         )
 
-        browseOrigin != null -> BrowseScreen(
-            state = state,
-            onBack = closeBrowse,
-            onTrackSelected = onTrackSelected,
-            onBrowseSelected = { item -> viewModel.browse(item.id) },
-            onRetry = viewModel::retry,
-        )
-
         else -> Scaffold(
             modifier = Modifier.fillMaxSize(),
             containerColor = MaterialTheme.colorScheme.background,
@@ -233,7 +225,10 @@ fun MusicxApp(
                             }
                             NavigationBarItem(
                                 selected = isSelected,
-                                onClick = { selectedTab = tab },
+                                onClick = {
+                                    if (browseOrigin != null) browseOrigin = null
+                                    selectedTab = tab
+                                },
                                 icon = {
                                     Icon(
                                         imageVector = icon,
@@ -261,45 +256,60 @@ fun MusicxApp(
                 }
             }
         ) { padding ->
-            Column(Modifier.padding(padding)) {
-                when (selectedTab) {
-                    MusicTab.Home -> HomeScreen(
-                        onBrowseSelected = { id ->
-                            browseOrigin = BrowseOrigin.Home
-                            viewModel.browse(id)
-                        },
-                        onOpenSettings = { showSettings = true },
-                    )
-
-                    MusicTab.Search -> SearchScreen(
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            ) {
+                if (browseOrigin != null) {
+                    BrowseScreen(
                         state = state,
-                        onSearch = { query, filter ->
-                            lastSearch = if (query.isBlank()) null else SearchOrigin(query.trim(), filter)
-                            viewModel.search(query, filter)
-                        },
+                        onBack = closeBrowse,
                         onTrackSelected = onTrackSelected,
-                        onBrowseSelected = { item ->
-                            browseOrigin = BrowseOrigin.Search(lastSearch)
-                            viewModel.browse(item.id)
-                        },
-                        onRetry = viewModel::retry
+                        onBrowseSelected = { item -> viewModel.browse(item.id) },
+                        onRetry = viewModel::retry,
                     )
+                } else {
+                    when (selectedTab) {
+                        MusicTab.Home -> HomeScreen(
+                            onBrowseSelected = { id ->
+                                browseOrigin = BrowseOrigin.Home
+                                viewModel.browse(id)
+                            },
+                            onTrackSelected = onTrackSelected,
+                            onOpenSettings = { showSettings = true },
+                        )
 
-                    MusicTab.Library -> LocalLibraryTab(onTrackSelected = onTrackSelected)
+                        MusicTab.Search -> SearchScreen(
+                            state = state,
+                            onSearch = { query, filter ->
+                                lastSearch = if (query.isBlank()) null else SearchOrigin(query.trim(), filter)
+                                viewModel.search(query, filter)
+                            },
+                            onTrackSelected = onTrackSelected,
+                            onBrowseSelected = { item ->
+                                browseOrigin = BrowseOrigin.Search(lastSearch)
+                                viewModel.browse(item.id)
+                            },
+                            onRetry = viewModel::retry
+                        )
 
-                    MusicTab.Spotify -> SpotifyTabContent(
-                        state = spotifyUi,
-                        onLogin = { showSpotifyLogin = true },
-                        onDisconnect = spotifyViewModel::disconnect,
-                        onPlaylistSelected = spotifyViewModel::loadPlaylistTracks,
-                        onTrackSelected = { track -> spotifyViewModel.matchTrack(track) },
-                        onPlayMatched = { catalogTrack ->
-                            playbackController.play(catalogTrack)
-                            showNowPlaying = true
-                        },
-                        onRetry = spotifyViewModel::loadLibrary,
-                        onBack = spotifyViewModel::loadLibrary,
-                    )
+                        MusicTab.Library -> LocalLibraryTab(onTrackSelected = onTrackSelected)
+
+                        MusicTab.Spotify -> SpotifyTabContent(
+                            state = spotifyUi,
+                            onLogin = { showSpotifyLogin = true },
+                            onDisconnect = spotifyViewModel::disconnect,
+                            onPlaylistSelected = spotifyViewModel::loadPlaylistTracks,
+                            onTrackSelected = { track -> spotifyViewModel.matchTrack(track) },
+                            onPlayMatched = { catalogTrack ->
+                                playbackController.play(catalogTrack)
+                                showNowPlaying = true
+                            },
+                            onRetry = spotifyViewModel::loadLibrary,
+                            onBack = spotifyViewModel::loadLibrary,
+                        )
+                    }
                 }
             }
         }

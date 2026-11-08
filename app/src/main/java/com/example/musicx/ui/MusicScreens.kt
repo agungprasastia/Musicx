@@ -1,16 +1,18 @@
 package com.example.musicx.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -21,20 +23,21 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -44,6 +47,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.musicx.core.model.CatalogFilter
 import com.example.musicx.core.model.CatalogItem
+import com.example.musicx.data.MusicSamples
+import kotlinx.coroutines.delay
 
 enum class MusicTab { Home, Search, Library, Spotify }
 
@@ -61,9 +66,21 @@ private val homeCollections = listOf(
     BrowseCollection("Trending", "Global Mix", "FEmusic_charts", listOf(Color(0xFF8E54E9), Color(0xFF4776E6))),
 )
 
+private val quickSampleTracks = MusicSamples.tracks.map { sample ->
+    CatalogItem.Track(
+        id = sample.id,
+        title = sample.title,
+        artist = sample.artist,
+        album = sample.album,
+        artworkUrl = null,
+        durationMs = 240_000L
+    )
+}
+
 @Composable
 fun HomeScreen(
     onBrowseSelected: (String) -> Unit,
+    onTrackSelected: (CatalogItem.Track) -> Unit = {},
     onOpenSettings: () -> Unit = {},
 ) {
     Column(
@@ -73,6 +90,7 @@ fun HomeScreen(
             .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(22.dp)
     ) {
+        // Spotify Top Header: Greeting + Settings
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -86,7 +104,7 @@ fun HomeScreen(
                 )
                 Text(
                     "Made for you",
-                    style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold, fontSize = 30.sp),
+                    style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold, fontSize = 28.sp),
                     color = MaterialTheme.colorScheme.onBackground
                 )
             }
@@ -117,9 +135,9 @@ fun HomeScreen(
             }
         }
 
-        // 2x2 Bento Editorial Grid matching editorial-home.html
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        // Spotify 2x2 Quick Grid Cards
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 EditorialGridCard(
                     title = homeCollections[0].title,
                     subtitle = homeCollections[0].subtitle,
@@ -135,7 +153,7 @@ fun HomeScreen(
                     onClick = { onBrowseSelected(homeCollections[1].browseId) }
                 )
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 EditorialGridCard(
                     title = homeCollections[2].title,
                     subtitle = homeCollections[2].subtitle,
@@ -153,8 +171,15 @@ fun HomeScreen(
             }
         }
 
-        SectionHeading("Made for your mood")
+        // Spotify "Quick Picks" / Instant Playable Tracks
+        SectionHeading("Quick picks")
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            quickSampleTracks.forEach { track ->
+                CatalogRow(track) { onTrackSelected(track) }
+            }
+        }
 
+        SectionHeading("Made for your mood")
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             MoodRowCard(
                 title = "After hours",
@@ -189,19 +214,28 @@ fun SearchScreen(
     var query by rememberSaveable { mutableStateOf("") }
     var filter by rememberSaveable { mutableStateOf(CatalogFilter.ALL) }
 
+    // Live Debounced Search: Stream results as user types!
+    LaunchedEffect(query, filter) {
+        if (query.isNotBlank()) {
+            delay(350)
+            onSearch(query.trim(), filter)
+        }
+    }
+
     Column(
         Modifier
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            "Search music",
+            "Search",
             style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
             color = MaterialTheme.colorScheme.onBackground
         )
 
+        // Spotify-style Search Input Bar
         OutlinedTextField(
             value = query,
             onValueChange = {
@@ -237,8 +271,8 @@ fun SearchScreen(
             singleLine = true,
             shape = RoundedCornerShape(20.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
                 focusedBorderColor = MaterialTheme.colorScheme.primary,
                 unfocusedBorderColor = Color.Transparent,
             ),
@@ -248,19 +282,7 @@ fun SearchScreen(
             )
         )
 
-        Button(
-            onClick = { onSearch(query, filter) },
-            enabled = query.isNotBlank(),
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            )
-        ) {
-            Text("Search YouTube Music", fontWeight = FontWeight.SemiBold)
-        }
-
+        // Spotify Category Filter Pills
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             CatalogFilter.entries.forEach { entry ->
                 FilterChip(
@@ -277,6 +299,20 @@ fun SearchScreen(
                     label = { Text(filterLabel(entry)) }
                 )
             }
+        }
+
+        // Secondary Search Button (Kept for instant explicit submit / test compatibility)
+        Button(
+            onClick = { onSearch(query, filter) },
+            enabled = query.isNotBlank(),
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
+        ) {
+            Text("Search YouTube Music", fontWeight = FontWeight.SemiBold)
         }
 
         if (query.isBlank()) {
@@ -315,31 +351,61 @@ fun BrowseScreen(
     Column(
         Modifier
             .fillMaxWidth()
-            .statusBarsPadding()
-            .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+            .padding(horizontal = 20.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Surface(
-            modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
-                .clickable(role = Role.Button, onClick = onBack),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-            shape = RoundedCornerShape(12.dp)
+        // Spotify Top Bar: Back Button
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                "← Back",
-                Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.SemiBold
-            )
+            Surface(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable(role = Role.Button, onClick = onBack),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(
+                    "← Back",
+                    Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            // Big Circular Play Button (Spotify-style) if tracks exist
+            val firstTrack = (state as? CatalogUiState.Results)?.items?.filterIsInstance<CatalogItem.Track>()?.firstOrNull()
+            if (firstTrack != null) {
+                Surface(
+                    modifier = Modifier
+                        .size(46.dp)
+                        .shadow(8.dp, CircleShape)
+                        .clip(CircleShape)
+                        .clickable(role = Role.Button, onClick = { onTrackSelected(firstTrack) }),
+                    color = MaterialTheme.colorScheme.primary,
+                    shape = CircleShape
+                ) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = MusicIcons.Play,
+                            contentDescription = "Play all",
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
+            }
         }
+
         Text(
             "Browse",
             style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
             color = MaterialTheme.colorScheme.onBackground
         )
+
         CatalogStateContent(
             state = state,
             onRetry = onRetry,

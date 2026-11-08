@@ -5,7 +5,10 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import androidx.media3.session.SessionCommand
@@ -34,7 +37,24 @@ class PlaybackService : MediaSessionService() {
             .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
             .build()
 
+        val httpDataSourceFactory = DefaultHttpDataSource.Factory()
+            .setUserAgent(MEDIA_USER_AGENT)
+            .setConnectTimeoutMs(15_000)
+            .setReadTimeoutMs(20_000)
+            .setAllowCrossProtocolRedirects(true)
+            .setDefaultRequestProperties(
+                mapOf(
+                    "Origin" to "https://music.youtube.com",
+                    "Referer" to "https://music.youtube.com/",
+                )
+            )
+
+        val dataSourceFactory = DefaultDataSource.Factory(this, httpDataSourceFactory)
+        val mediaSourceFactory = DefaultMediaSourceFactory(this)
+            .setDataSourceFactory(dataSourceFactory)
+
         val exoPlayer = ExoPlayer.Builder(this)
+            .setMediaSourceFactory(mediaSourceFactory)
             .setAudioAttributes(audioAttributes, true)
             .setHandleAudioBecomingNoisy(true)
             .build()
@@ -108,5 +128,7 @@ class PlaybackService : MediaSessionService() {
     companion object {
         val SKIP_SILENCE_COMMAND = SessionCommand("com.example.musicx.SKIP_SILENCE", Bundle.EMPTY)
         const val EXTRA_ENABLED = "enabled"
+        private const val MEDIA_USER_AGENT =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
     }
 }

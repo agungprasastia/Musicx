@@ -386,4 +386,63 @@ object MusicIcons {
             }
         }.build()
     }
+
+    val Shuffle: ImageVector by lazy {
+        ImageVector.Builder(
+            name = "ic_shuffle",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f
+        ).apply {
+            path(stroke = stroke, strokeLineWidth = 2f, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+                moveTo(4f, 7f); lineTo(7f, 7f); lineTo(17f, 17f); lineTo(20f, 17f)
+                moveTo(17f, 14f); lineTo(20f, 17f); lineTo(17f, 20f)
+                moveTo(4f, 17f); lineTo(7f, 17f); lineTo(9.5f, 14.5f)
+                moveTo(14.5f, 9.5f); lineTo(17f, 7f); lineTo(20f, 7f)
+                moveTo(17f, 4f); lineTo(20f, 7f); lineTo(17f, 10f)
+            }
+        }.build()
+    }
+
+    val Repeat: ImageVector by lazy {
+        ImageVector.Builder(
+            name = "ic_repeat",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f
+        ).apply {
+            path(stroke = stroke, strokeLineWidth = 2f, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+                moveTo(5f, 8f); lineTo(17f, 8f); arcToRelative(3f, 3f, 0f, false, true, 3f, 3f); lineTo(20f, 13f)
+                moveTo(17f, 5f); lineTo(20f, 8f); lineTo(17f, 11f)
+                moveTo(19f, 16f); lineTo(7f, 16f); arcToRelative(3f, 3f, 0f, false, true, -3f, -3f); lineTo(4f, 11f)
+                moveTo(7f, 19f); lineTo(4f, 16f); lineTo(7f, 13f)
+            }
+        }.build()
+    }
+
+    val Heart: ImageVector by lazy {
+        ImageVector.Builder(
+            name = "ic_heart",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f
+        ).apply {
+            path(stroke = stroke, strokeLineWidth = 2f, strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round) {
+                moveTo(12f, 20f)
+                lineTo(10.55f, 18.7f)
+                quadTo(5.4f, 14.05f, 3.2f, 11.1f)
+                quadTo(1f, 8.15f, 2.5f, 4.95f)
+                quadTo(4f, 1.75f, 8.5f, 3.25f)
+                quadTo(10.7f, 4f, 12f, 6.1f)
+                quadTo(13.3f, 4f, 15.5f, 3.25f)
+                quadTo(20f, 1.75f, 21.5f, 4.95f)
+                quadTo(23f, 8.15f, 20.8f, 11.1f)
+                quadTo(18.6f, 14.05f, 13.45f, 18.7f)
+                close()
+            }
+        }.build()
+    }
 }

@@ -124,7 +124,10 @@ class YouTubeStreamResolver(
         (streaming.arr("adaptiveFormats").orEmpty() + streaming.arr("formats").orEmpty()).forEach { element ->
             val format = element as? JsonObject ?: return@forEach
             val mimeType = format.text("mimeType") ?: return@forEach
-            if (!mimeType.startsWith("audio/", ignoreCase = true)) return@forEach
+            val hasAudio = mimeType.startsWith("audio/", ignoreCase = true) ||
+                mimeType.contains("mp4a", ignoreCase = true) ||
+                mimeType.contains("opus", ignoreCase = true)
+            if (!hasAudio) return@forEach
             sawAudio = true
 
             val directUrl = format.text("url")
@@ -164,7 +167,8 @@ class YouTubeStreamResolver(
         }
 
         val best = candidates.maxWithOrNull(
-            compareBy<Candidate> { candidate -> candidate.bitrate }
+            compareBy<Candidate> { candidate -> if (candidate.mimeType.startsWith("audio/", ignoreCase = true)) 1 else 0 }
+                .thenBy { candidate -> candidate.bitrate }
                 .thenBy { candidate -> if (candidate.mimeType.contains("mp4", ignoreCase = true)) 1 else 0 }
         ) ?: return Result.failure(StreamResolveError.NoAudioStream)
 
