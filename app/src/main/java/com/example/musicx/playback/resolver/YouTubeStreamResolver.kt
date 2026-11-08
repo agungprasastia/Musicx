@@ -32,34 +32,117 @@ class InnerTubeYouTubePlayerClient(
     private val transport: InnerTubeTransport,
     private val clientVersion: String = WEB_REMIX_CLIENT_VERSION,
 ) : YouTubePlayerClient {
+    private val json = Json { ignoreUnknownKeys = true }
+
     override suspend fun player(trackId: String): Result<String> {
         val id = trackId.trim()
         if (id.isEmpty()) return Result.failure(StreamResolveError.EmptyTrackId)
-        val body = buildJsonObject {
-            putJsonObject("context") {
-                putJsonObject("client") {
-                    put("clientName", "WEB_REMIX")
-                    put("clientVersion", clientVersion)
-                    put("hl", "en")
-                    put("gl", "US")
+
+        val clients = listOf(
+            ClientIdentity(
+                name = "WEB_REMIX",
+                version = clientVersion,
+            ),
+            ClientIdentity(
+                name = "VISIONOS",
+                version = "1.02",
+                osName = "VISION_OS",
+                deviceMake = "Apple",
+                deviceModel = "RealityDevice14,1",
+            ),
+            ClientIdentity(
+                name = "ANDROID_VR",
+                version = "1.65.10",
+                osName = "Android",
+                deviceMake = "Oculus",
+                deviceModel = "Quest 3",
+            ),
+            ClientIdentity(
+                name = "IOS",
+                version = "21.26.4",
+                osName = "iOS",
+                deviceMake = "Apple",
+                deviceModel = "iPhone16,2",
+            ),
+        )
+
+        var lastError: Throwable? = null
+        var fallbackResponse: String? = null
+
+        for (client in clients) {
+            val body = buildBody(id, client)
+            val result = transport.post("player", body)
+            if (result.isSuccess) {
+                val raw = result.getOrThrow()
+                if (hasDirectAudioStream(raw)) {
+                    return Result.success(raw)
                 }
-                putJsonObject("user") {
-                    put("lockedSafetyMode", false)
+                if (fallbackResponse == null) {
+                    fallbackResponse = raw
                 }
-                putJsonObject("request") {
-                    put("useSsl", true)
+            } else {
+                if (lastError == null) {
+                    lastError = result.exceptionOrNull()
                 }
             }
-            put("videoId", id)
-            put("contentCheckOk", true)
-            put("racyCheckOk", true)
-        }.toString()
+        }
 
-        return transport.post("player", body).fold(
-            onSuccess = { Result.success(it) },
-            onFailure = { Result.failure(it.asStreamFailure()) },
-        )
+        return when {
+            fallbackResponse != null -> Result.success(fallbackResponse)
+            lastError != null -> Result.failure(lastError.asStreamFailure())
+            else -> Result.failure(StreamResolveError.Unavailable)
+        }
     }
+
+    private fun buildBody(id: String, client: ClientIdentity): String = buildJsonObject {
+        putJsonObject("context") {
+            putJsonObject("client") {
+                put("clientName", client.name)
+                put("clientVersion", client.version)
+                client.osName?.let { put("osName", it) }
+                client.deviceMake?.let { put("deviceMake", it) }
+                client.deviceModel?.let { put("deviceModel", it) }
+                put("hl", "en")
+                put("gl", "US")
+            }
+            putJsonObject("user") {
+                put("lockedSafetyMode", false)
+            }
+            putJsonObject("request") {
+                put("useSsl", true)
+            }
+        }
+        put("videoId", id)
+        put("contentCheckOk", true)
+        put("racyCheckOk", true)
+    }.toString()
+
+    private fun hasDirectAudioStream(raw: String): Boolean {
+        val root = try {
+            json.parseToJsonElement(raw) as? JsonObject
+        } catch (_: Exception) {
+            null
+        } ?: return false
+        val status = (root["playabilityStatus"] as? JsonObject)?.get("status")?.let { (it as? JsonPrimitive)?.contentOrNull }
+        if (status != null && status != "OK") return false
+        val streaming = root["streamingData"] as? JsonObject ?: return false
+        val formats = ((streaming["adaptiveFormats"] as? JsonArray).orEmpty() + (streaming["formats"] as? JsonArray).orEmpty())
+        return formats.any { format ->
+            val obj = format as? JsonObject ?: return@any false
+            val mimeType = (obj["mimeType"] as? JsonPrimitive)?.contentOrNull.orEmpty()
+            val hasAudio = mimeType.startsWith("audio/", ignoreCase = true) || mimeType.contains("opus", ignoreCase = true) || mimeType.contains("mp4a", ignoreCase = true)
+            val hasUrl = !(obj["url"] as? JsonPrimitive)?.contentOrNull.isNullOrBlank()
+            hasAudio && hasUrl
+        }
+    }
+
+    private data class ClientIdentity(
+        val name: String,
+        val version: String,
+        val osName: String? = null,
+        val deviceMake: String? = null,
+        val deviceModel: String? = null,
+    )
 
     private companion object {
         const val WEB_REMIX_CLIENT_VERSION = "1.20250101.01.00"

@@ -66,15 +66,36 @@ private val homeCollections = listOf(
     BrowseCollection("Trending", "Global Mix", "FEmusic_charts", listOf(Color(0xFF8E54E9), Color(0xFF4776E6))),
 )
 
-private val quickSampleTracks = MusicSamples.tracks.map { sample ->
+private val quickSampleTracks = MusicSamples.tracks.take(8).map { sample ->
     CatalogItem.Track(
         id = sample.id,
         title = sample.title,
         artist = sample.artist,
         album = sample.album,
-        artworkUrl = null,
-        durationMs = 240_000L
+        artworkUrl = sample.artworkUrl,
+        durationMs = parseDurationLabel(sample.durationLabel)
     )
+}
+
+private val popularTracks = MusicSamples.tracks.drop(8).map { sample ->
+    CatalogItem.Track(
+        id = sample.id,
+        title = sample.title,
+        artist = sample.artist,
+        album = sample.album,
+        artworkUrl = sample.artworkUrl,
+        durationMs = parseDurationLabel(sample.durationLabel)
+    )
+}
+
+private fun parseDurationLabel(label: String): Long {
+    val parts = label.split(':')
+    if (parts.size == 2) {
+        val m = parts[0].toLongOrNull() ?: 0L
+        val s = parts[1].toLongOrNull() ?: 0L
+        return (m * 60 + s) * 1000L
+    }
+    return 200_000L
 }
 
 @Composable
@@ -176,6 +197,15 @@ fun HomeScreen(
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             quickSampleTracks.forEach { track ->
                 CatalogRow(track) { onTrackSelected(track) }
+            }
+        }
+
+        if (popularTracks.isNotEmpty()) {
+            SectionHeading("Popular now")
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                popularTracks.forEach { track ->
+                    CatalogRow(track) { onTrackSelected(track) }
+                }
             }
         }
 

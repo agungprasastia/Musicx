@@ -7,6 +7,7 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.ResolvingDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
@@ -37,19 +38,31 @@ class PlaybackService : MediaSessionService() {
             .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
             .build()
 
-        val httpDataSourceFactory = DefaultHttpDataSource.Factory()
+        val baseHttpDataSourceFactory = DefaultHttpDataSource.Factory()
             .setUserAgent(MEDIA_USER_AGENT)
             .setConnectTimeoutMs(15_000)
             .setReadTimeoutMs(20_000)
             .setAllowCrossProtocolRedirects(true)
-            .setDefaultRequestProperties(
-                mapOf(
-                    "Origin" to "https://music.youtube.com",
-                    "Referer" to "https://music.youtube.com/",
-                )
-            )
 
-        val dataSourceFactory = DefaultDataSource.Factory(this, httpDataSourceFactory)
+        val resolvingDataSourceFactory = ResolvingDataSource.Factory(
+            baseHttpDataSourceFactory
+        ) { dataSpec ->
+            val clientName = dataSpec.uri.getQueryParameter("c")?.uppercase(java.util.Locale.ROOT)
+            if (clientName == "WEB_REMIX") {
+                dataSpec.buildUpon()
+                    .setHttpRequestHeaders(
+                        mapOf(
+                            "Origin" to "https://music.youtube.com",
+                            "Referer" to "https://music.youtube.com/",
+                        )
+                    )
+                    .build()
+            } else {
+                dataSpec
+            }
+        }
+
+        val dataSourceFactory = DefaultDataSource.Factory(this, resolvingDataSourceFactory)
         val mediaSourceFactory = DefaultMediaSourceFactory(this)
             .setDataSourceFactory(dataSourceFactory)
 
