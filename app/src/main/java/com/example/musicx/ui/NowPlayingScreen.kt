@@ -1,5 +1,7 @@
 package com.example.musicx.ui
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -24,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.musicx.playback.PlaybackStatus
 import com.example.musicx.playback.PlaybackUiState
@@ -46,9 +49,11 @@ fun NowPlayingScreen(
     val sliderValue = draggedPosition
         ?: state.positionMs.coerceIn(0, durationMs).toFloat()
 
+    val trackAccent = remember(track?.id) { track?.let(::trackDynamicColor) ?: Color.Transparent }
+
     Column(
         Modifier.fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(if (track != null) trackAccent.copy(alpha = 0.08f) else MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 18.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -111,9 +116,12 @@ private fun TrackDetails(
     onSkipPrevious: () -> Unit,
     onRetry: () -> Unit,
 ) {
-    CatalogArtwork(track, Modifier.fillMaxWidth().aspectRatio(1f))
+    Crossfade(targetState = track.id, animationSpec = tween(400), label = "artwork") { _ ->
+        CatalogArtwork(track, Modifier.fillMaxWidth().aspectRatio(1f))
+    }
     Text(track.title, style = MaterialTheme.typography.headlineMedium)
     Text(track.artist, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    track.album?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
     Text(statusLine(state), color = MaterialTheme.colorScheme.onSurfaceVariant)
 
     Slider(
@@ -150,20 +158,39 @@ private fun TrackDetails(
         TextButton(onClick = onRetry) { Text("Retry") }
     }
 
-    val upcoming = state.queue.drop(state.currentIndex + 1)
-    if (upcoming.isNotEmpty()) {
-        SectionHeading("Up next")
-        upcoming.take(8).forEach { queued ->
+    SectionHeading("Lyrics")
+    Text(
+        "Lyrics are not available. A lyrics provider has not been configured.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+
+    if (state.queue.size > 1) {
+        SectionHeading("Queue")
+        state.queue.forEachIndexed { index, queued ->
+            val isCurrent = index == state.currentIndex
             Row(
-                Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                Modifier.fillMaxWidth()
+                    .then(if (isCurrent) Modifier.background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)) else Modifier)
+                    .padding(vertical = 6.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                Text(
+                    "${index + 1}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 CatalogArtwork(queued, Modifier.size(40.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(queued.title, color = MaterialTheme.colorScheme.onBackground)
+                    Text(
+                        queued.title,
+                        color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
+                        maxLines = 1,
+                    )
                     Text(queued.artist, style = MaterialTheme.typography.labelSmall)
                 }
+                if (isCurrent) Text("▶", color = MaterialTheme.colorScheme.primary)
             }
         }
     }
@@ -196,4 +223,9 @@ private fun formatDuration(milliseconds: Long): String {
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
     return "%d:%02d".format(minutes, seconds)
+}
+
+private fun trackDynamicColor(track: CatalogItem.Track): Color {
+    val hue = (track.id.hashCode() and 0x7FFFFFFF) % 360
+    return Color.hsl(hue.toFloat(), 0.45f, 0.38f)
 }
