@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.ListenableFuture
  * MediaSessionService publishes the media notification and routes notification
  * and lock-screen transport commands through the session.
  */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class PlaybackService : MediaSessionService() {
     private var player: ExoPlayer? = null
     private var mediaSession: MediaSession? = null

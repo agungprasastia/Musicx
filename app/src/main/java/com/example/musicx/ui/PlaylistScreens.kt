@@ -305,6 +305,7 @@ fun LibraryPlaylistsTab(
 
     if (showCreateDialog) {
         var playlistName by remember { mutableStateOf("") }
+
         AlertDialog(
             onDismissRequest = { showCreateDialog = false },
             title = { Text("Give your playlist a name") },

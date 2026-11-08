@@ -82,6 +82,20 @@ class PlaylistRepository(private val baseDir: File) {
     }
 
     @Synchronized
+    fun importPlaylist(name: String, tracks: List<CatalogItem.Track>): UserPlaylist {
+        val cleanName = name.trim().ifEmpty { "Imported Playlist" }
+        val newPlaylist = UserPlaylist(
+            id = "pl_${UUID.randomUUID()}",
+            name = cleanName,
+            createdAt = System.currentTimeMillis(),
+            tracks = tracks,
+        )
+        _playlists.value = listOf(newPlaylist) + _playlists.value
+        saveToDisk()
+        return newPlaylist
+    }
+
+    @Synchronized
     fun deletePlaylist(playlistId: String) {
         _playlists.value = _playlists.value.filter { it.id != playlistId }
         saveToDisk()

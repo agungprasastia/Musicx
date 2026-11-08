@@ -24,17 +24,22 @@ class SpotifyHttpTransport(
         val safeUrl = validateSpotifyUrl(url)
         val request = Request.Builder()
             .url(safeUrl)
-            .post(body.toRequestBody(JSON_MEDIA_TYPE))
+            .post(body.toByteArray(Charsets.UTF_8).toRequestBody(JSON_MEDIA_TYPE))
             .header("Accept", "application/json")
+            .header("User-Agent", USER_AGENT)
             .apply { headers.forEach { (name, value) -> header(name, value) } }
             .build()
         try {
             client.newCall(request).execute().use { response ->
                 if (response.code == 401 || response.code == 403) throw SpotifyError.SessionExpired
-                if (!response.isSuccessful) throw SpotifyError.Http(response.code)
+                if (!response.isSuccessful) {
+                    val errBody = runCatching { response.body?.string() }.getOrNull()
+                    android.util.Log.e("SpotifyHttp", "Request failed (${response.code}) url=$safeUrl body=$errBody")
+                    throw SpotifyError.Http(response.code)
+                }
                 val responseBody = response.body ?: throw SpotifyError.InvalidResponse
                 if (responseBody.contentLength() > MAX_RESPONSE_BYTES) throw SpotifyError.ResponseTooLarge
-                val bytes = responseBody.source().readByteArray((MAX_RESPONSE_BYTES + 1).toLong())
+                val bytes = responseBody.bytes()
                 if (bytes.size > MAX_RESPONSE_BYTES) throw SpotifyError.ResponseTooLarge
                 bytes.toString(Charsets.UTF_8)
             }
@@ -43,12 +48,15 @@ class SpotifyHttpTransport(
         } catch (error: SpotifyError) {
             throw error
         } catch (error: IOException) {
+            android.util.Log.e("SpotifyHttp", "Network error calling $safeUrl: ${error.message}", error)
             throw SpotifyError.Network(error)
         }
     }
 
     companion object {
-        private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
+        private val JSON_MEDIA_TYPE = "application/json".toMediaType()
+        private const val USER_AGENT =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
         const val MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 
         fun validateSpotifyUrl(raw: String): String {

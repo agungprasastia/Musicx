@@ -211,8 +211,8 @@ fun NowPlayingScreen(
                         .aspectRatio(1f)
                         .shadow(24.dp, RoundedCornerShape(16.dp), spotColor = Color.Black, ambientColor = Color.Black)
                 ) {
-                    Crossfade(targetState = track.id, animationSpec = tween(350), label = "art") { _ ->
-                        CatalogArtwork(track, Modifier.fillMaxSize())
+                    Crossfade(targetState = track, animationSpec = tween(350), label = "art") { currentTrack ->
+                        CatalogArtwork(currentTrack, Modifier.fillMaxSize())
                     }
                 }
 

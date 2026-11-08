@@ -1,192 +1,205 @@
 package com.example.musicx.ui
 
 import android.annotation.SuppressLint
-import android.graphics.Bitmap
+import android.net.Uri
+import android.view.View
+import android.view.ViewGroup
 import android.webkit.CookieManager
-import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.musicx.spotify.auth.SpotifySecret
-import com.example.musicx.spotify.auth.isSpotifyLoginNavigationAllowed
 import com.example.musicx.spotify.auth.parseSpDcCookie
 
+private const val LOGIN_URL =
+    "https://accounts.spotify.com/login?continue=https%3A%2F%2Fopen.spotify.com%2F"
+
+private val SPOTIFY_COOKIE_URLS = listOf(
+    "https://open.spotify.com",
+    "https://accounts.spotify.com",
+    "https://www.spotify.com",
+    "https://spotify.com",
+)
+
+private val LOGIN_HOST_SUFFIXES = listOf(
+    "spotify.com", "scdn.co", "google.com", "gstatic.com", "facebook.com", "apple.com", "recaptcha.net"
+)
+
+private fun hostMatches(uri: Uri?, suffixes: List<String>): Boolean {
+    if (uri?.scheme != "https") return false
+    val host = uri.host?.lowercase() ?: return false
+    return suffixes.any { host == it || host.endsWith(".$it") }
+}
+
+private fun isLoginHost(uri: Uri?) = hostMatches(uri, LOGIN_HOST_SUFFIXES)
+
+private val WEBVIEW_VERSION_TOKEN = Regex("""Version/\d+(\.\d+)*\s*""")
+
+private const val FALLBACK_USER_AGENT =
+    "Mozilla/5.0 (Linux; Android 14; SM-S921U; Build/UP1A.231005.007) " +
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36"
+
+internal fun browserUserAgent(platformUserAgent: String?): String {
+    val stripped = platformUserAgent
+        ?.replace("; wv", "")
+        ?.replace(WEBVIEW_VERSION_TOKEN, "")
+        ?.replace("  ", " ")
+        ?.trim()
+    return stripped?.takeIf { it.contains("Chrome/") } ?: FALLBACK_USER_AGENT
+}
+
+private fun extractSpDc(): SpotifySecret? {
+    val cm = CookieManager.getInstance()
+    for (url in SPOTIFY_COOKIE_URLS) {
+        val raw = cm.getCookie(url) ?: continue
+        parseSpDcCookie(raw)?.let { return it }
+        val token = raw.split(";")
+            .map { it.trim() }
+            .firstOrNull { it.startsWith("sp_dc=") }
+            ?.substringAfter("sp_dc=")
+            ?.trim()
+            ?.let { SpotifySecret.parse(it) }
+        if (token != null) return token
+    }
+    return null
+}
+
+fun clearSpotifyWebSession() {
+    val cookies = CookieManager.getInstance()
+    for (url in SPOTIFY_COOKIE_URLS) {
+        val names = cookies.getCookie(url)?.split(";")
+            ?.map { it.substringBefore("=").trim() }
+            ?.filter { it.isNotEmpty() }
+            .orEmpty()
+        for (name in names) {
+            val expired = "$name=; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/"
+            cookies.setCookie(url, expired)
+            cookies.setCookie(url, "$expired; Domain=.spotify.com")
+        }
+    }
+    cookies.flush()
+}
+
+@SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun SpotifyLoginScreen(
     onCookieHarvested: (SpotifySecret) -> Unit,
     onCancel: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
-    var isLoading by remember { mutableStateOf(true) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var webView by remember { mutableStateOf<WebView?>(null) }
+    var canGoBack by remember { mutableStateOf(false) }
 
     Column(
-        Modifier
+        modifier = modifier
             .fillMaxSize()
+            .background(Color(0xFF121212))
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
-        Text(
-            "← Cancel",
-            Modifier.clickable(onClick = onCancel).padding(16.dp),
-            color = MaterialTheme.colorScheme.primary,
-        )
-        Text(
-            "Sign in with Spotify",
-            Modifier.padding(horizontal = 16.dp),
-            style = MaterialTheme.typography.titleMedium,
-        )
-        Text(
-            "Sign in to import your playlists. Audio is played from YouTube Music.",
-            Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        val webView = remember { createLoginWebView(context) }
-
-        DisposableEffect(Unit) {
-            CookieManager.getInstance().removeAllCookies(null)
-            webView.loadUrl(LOGIN_URL)
-            onDispose {
-                webView.stopLoading()
-                webView.loadUrl("about:blank")
-                webView.clearHistory()
-                webView.clearCache(true)
-                webView.destroy()
-            }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "← Cancel",
+                modifier = Modifier.clickable(onClick = onCancel),
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.titleMedium
+            )
         }
 
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .weight(1f)
-        ) {
+        Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
             AndroidView(
-                factory = {
-                    webView.apply {
-                        this.webViewClient = object : WebViewClient() {
-                            override fun shouldOverrideUrlLoading(
-                                view: WebView?,
-                                request: WebResourceRequest?,
-                            ): Boolean {
-                                val url = request?.url?.toString() ?: return false
-                                if (request.isForMainFrame == false) return false
-                                return !isSpotifyLoginNavigationAllowed(url)
-                            }
+                modifier = Modifier.fillMaxSize(),
+                factory = { context ->
+                    WebView(context).apply {
+                        layoutParams = ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                        )
+                        settings.javaScriptEnabled = true
+                        settings.domStorageEnabled = true
+                        settings.userAgentString = browserUserAgent(settings.userAgentString)
+                        setBackgroundColor(0xFF121212.toInt())
+                        CookieManager.getInstance().setAcceptCookie(true)
+                        CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
 
-                            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                                super.onPageStarted(view, url, favicon)
-                                isLoading = true
-                                errorMessage = null
-                            }
-
-                            override fun onPageFinished(view: WebView?, url: String?) {
-                                super.onPageFinished(view, url)
-                                isLoading = false
-                                if (url != null && url.startsWith("https://open.spotify.com")) {
-                                    val cookies = CookieManager.getInstance().getCookie(url) ?: return
-                                    val secret = parseSpDcCookie(cookies) ?: return
-                                    onCookieHarvested(secret)
-                                }
-                            }
-
-                            override fun onReceivedError(
-                                view: WebView?,
-                                request: WebResourceRequest?,
-                                error: WebResourceError?,
-                            ) {
-                                super.onReceivedError(view, request, error)
-                                if (request?.isForMainFrame == true) {
-                                    isLoading = false
-                                    errorMessage = "Unable to connect to Spotify login page."
-                                }
+                        var sent = false
+                        fun checkSession(view: WebView, url: String?) {
+                            if (sent) return
+                            val secret = extractSpDc()
+                            if (secret != null && (url == null || url.startsWith("https://open.spotify.com") || !url.contains("/login"))) {
+                                sent = true
+                                view.visibility = View.GONE
+                                onCookieHarvested(secret)
                             }
                         }
+
+                        webViewClient = object : WebViewClient() {
+                            override fun shouldOverrideUrlLoading(
+                                view: WebView,
+                                request: WebResourceRequest,
+                            ): Boolean {
+                                val url = request.url
+                                checkSession(view, url.toString())
+                                return !isLoginHost(url)
+                            }
+
+                            override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {
+                                super.onPageStarted(view, url, favicon)
+                                checkSession(view, url)
+                            }
+
+                            override fun onPageFinished(view: WebView, url: String?) {
+                                canGoBack = view.canGoBack()
+                                checkSession(view, url)
+                            }
+
+                            override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boolean) {
+                                super.doUpdateVisitedHistory(view, url, isReload)
+                                checkSession(view, url)
+                            }
+                        }
+                        webView = this
+                        loadUrl(LOGIN_URL)
                     }
                 },
-                modifier = Modifier.fillMaxSize(),
+                onRelease = { it.destroy() },
             )
+        }
+    }
 
-            if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .align(Alignment.Center),
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-
-            if (errorMessage != null) {
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        errorMessage ?: "",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                    Button(
-                        onClick = {
-                            errorMessage = null
-                            isLoading = true
-                            webView.loadUrl(LOGIN_URL)
-                        },
-                        modifier = Modifier.padding(top = 12.dp)
-                    ) {
-                        Text("Retry")
-                    }
-                }
-            }
+    BackHandler(enabled = true) {
+        if (canGoBack && webView?.canGoBack() == true) {
+            webView?.goBack()
+        } else {
+            onCancel()
         }
     }
 }
-
-@SuppressLint("SetJavaScriptEnabled")
-private fun createLoginWebView(context: android.content.Context): WebView {
-    return WebView(context).apply {
-        settings.javaScriptEnabled = true
-        settings.domStorageEnabled = true
-        @Suppress("DEPRECATION")
-        settings.databaseEnabled = false
-        settings.allowFileAccess = false
-        settings.allowContentAccess = false
-
-        // Remove WebView marker so accounts.spotify.com allows modern web auth
-        val defaultUa = settings.userAgentString
-        settings.userAgentString = defaultUa.replace("; wv", "").replace("Version/4.0 ", "")
-
-        val cookieManager = CookieManager.getInstance()
-        cookieManager.setAcceptCookie(true)
-        cookieManager.setAcceptThirdPartyCookies(this, true)
-    }
-}
-
-private const val LOGIN_URL = "https://accounts.spotify.com/login"

@@ -45,7 +45,7 @@ class ListenBrainzTokenStore(context: Context) {
     }
 
     fun clear() {
-        preferences.edit().clear().commit()
+        preferences.edit().clear().apply()
     }
 
     private fun key(): SecretKey {

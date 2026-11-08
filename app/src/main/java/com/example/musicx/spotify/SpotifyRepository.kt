@@ -13,15 +13,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class SpotifyRepository(
+open class SpotifyRepository(
     private val store: SpotifySecretStore,
     private val tokenProvider: SpotifyTokenProvider,
     private val libraryClient: SpotifyLibraryClient,
 ) {
     private val _session = MutableStateFlow<SpotifySessionState>(SpotifySessionState.Disconnected)
-    val session: StateFlow<SpotifySessionState> = _session.asStateFlow()
+    open val session: StateFlow<SpotifySessionState> = _session.asStateFlow()
 
-    suspend fun connect(secret: SpotifySecret) {
+    open suspend fun connect(secret: SpotifySecret) {
         _session.value = SpotifySessionState.Connecting
         try {
             store.saveSecret(secret)
@@ -44,19 +44,19 @@ class SpotifyRepository(
         }
     }
 
-    fun disconnect() {
+    open fun disconnect() {
         store.clear()
         tokenProvider.clearCache()
         _session.value = SpotifySessionState.Disconnected
     }
 
-    suspend fun restoreSession(): Boolean {
+    open suspend fun restoreSession(): Boolean {
         val secret = store.loadSecret() ?: return false
         connect(secret)
         return _session.value == SpotifySessionState.Connected
     }
 
-    suspend fun playlists(): List<SpotifyPlaylist> = withSessionRecovery {
+    open suspend fun playlists(): List<SpotifyPlaylist> = withSessionRecovery {
         val liked = SpotifyPlaylist(
             id = LIKED_ID,
             name = "Liked Songs",
@@ -67,11 +67,11 @@ class SpotifyRepository(
         listOf(liked) + libraryClient.playlists()
     }
 
-    suspend fun playlistTracks(id: String): List<SpotifyTrack> = withSessionRecovery {
+    open suspend fun playlistTracks(id: String): List<SpotifyTrack> = withSessionRecovery {
         libraryClient.playlistTracks(id)
     }
 
-    suspend fun likedTracks(): List<SpotifyTrack> = withSessionRecovery {
+    open suspend fun likedTracks(): List<SpotifyTrack> = withSessionRecovery {
         libraryClient.likedTracks()
     }
 

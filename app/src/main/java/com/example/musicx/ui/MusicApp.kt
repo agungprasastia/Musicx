@@ -150,10 +150,14 @@ fun MusicxApp(
         }
     }
 
-    BackHandler(enabled = showSpotifyLogin) { showSpotifyLogin = false }
     BackHandler(enabled = showSettings && !showSpotifyLogin) { showSettings = false }
     BackHandler(enabled = showNowPlaying && !showSpotifyLogin && !showSettings) { showNowPlaying = false }
-    BackHandler(enabled = browseOrigin != null && !showNowPlaying && !showSpotifyLogin && !showSettings) { closeBrowse() }
+    BackHandler(enabled = showSpotifyImport && !showSpotifyLogin && !showSettings && !showNowPlaying) {
+        if (!spotifyViewModel.goBack()) {
+            showSpotifyImport = false
+        }
+    }
+    BackHandler(enabled = browseOrigin != null && !showNowPlaying && !showSpotifyLogin && !showSettings && !showSpotifyImport) { closeBrowse() }
 
     when {
         showSpotifyLogin -> SpotifyLoginScreen(
@@ -309,7 +313,11 @@ fun MusicxApp(
                                             modifier = Modifier
                                                 .size(36.dp)
                                                 .clip(CircleShape)
-                                                .clickable { showSpotifyImport = false },
+                                                .clickable {
+                                                    if (!spotifyViewModel.goBack()) {
+                                                        showSpotifyImport = false
+                                                    }
+                                                },
                                             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                                             shape = CircleShape
                                         ) {
@@ -334,7 +342,20 @@ fun MusicxApp(
                                             showNowPlaying = true
                                         },
                                         onRetry = spotifyViewModel::loadLibrary,
-                                        onBack = { showSpotifyImport = false },
+                                        onBack = {
+                                            if (!spotifyViewModel.goBack()) {
+                                                showSpotifyImport = false
+                                            }
+                                        },
+                                        onImportSuccess = { imported ->
+                                            playlistRepo.importPlaylist(imported.title, imported.tracks)
+                                            showSpotifyImport = false
+                                            android.widget.Toast.makeText(
+                                                context,
+                                                "Imported '${imported.title}' (${imported.tracks.size} songs)",
+                                                android.widget.Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
                                     )
                                 }
                             } else {
@@ -362,9 +383,10 @@ private fun SpotifyTabContent(
     onPlayMatched: (CatalogItem.Track) -> Unit,
     onRetry: () -> Unit,
     onBack: () -> Unit,
+    onImportSuccess: (com.example.musicx.spotify.SpotifyImportResult) -> Unit = {},
 ) {
     when (state) {
-        SpotifyUiState.Disconnected -> SpotifyDisconnectedScreen(onLogin)
+        SpotifyUiState.Disconnected -> SpotifyDisconnectedScreen(onLogin, onImportSuccess)
         SpotifyUiState.Connecting -> SpotifyLoadingScreen()
         SpotifyUiState.Loading -> SpotifyLoadingScreen()
         SpotifyUiState.Expired -> SpotifyExpiredScreen(onLogin, onDisconnect)
@@ -483,11 +505,18 @@ private fun miniPlayerStatus(state: PlaybackUiState): String {
 private fun rememberDefaultPlaybackController(): PlaybackController {
     val context = LocalContext.current.applicationContext
     val controller = remember(context) {
+        val catalogRepo = YouTubeMusicRepository(
+            InnerTubeYouTubeMusicClient(OkHttpInnerTubeTransport())
+        )
         PlaybackController(
             context = context,
             resolver = YouTubeStreamResolver(
                 InnerTubeYouTubePlayerClient(OkHttpInnerTubeTransport())
             ),
+            searchFallback = { track ->
+                val searchRes = catalogRepo.search("${track.title} ${track.artist}", CatalogFilter.SONGS)
+                searchRes.getOrNull()?.filterIsInstance<CatalogItem.Track>()?.firstOrNull()?.id
+            }
         )
     }
     DisposableEffect(controller) {

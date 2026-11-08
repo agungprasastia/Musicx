@@ -75,6 +75,7 @@ data class PlaybackUiState(
 class PlaybackController(
     context: Context,
     private val resolver: StreamResolver,
+    private val searchFallback: (suspend (CatalogItem.Track) -> String?)? = null,
 ) {
     private val appContext = context.applicationContext
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -171,7 +172,7 @@ class PlaybackController(
             )
         )
         resolveJob = scope.launch {
-            resolver.resolve(track.id).fold(
+            resolveTrack(track).fold(
                 onSuccess = { stream ->
                     if (released || resolvingTrack?.id != track.id) return@launch
                     resolvingTrack = null
@@ -198,6 +199,19 @@ class PlaybackController(
         }
     }
 
+    // ponytail: search fallback for third-party IDs (Spotify/local). Add catalog-level mapping table when available.
+    private suspend fun resolveTrack(track: CatalogItem.Track): Result<ResolvedStream> {
+        var res = resolver.resolve(track.id)
+        val fallback = searchFallback
+        if (res.isFailure && fallback != null) {
+            val fallbackId = runCatching { fallback(track) }.getOrNull()
+            if (!fallbackId.isNullOrBlank()) {
+                res = resolver.resolve(fallbackId)
+            }
+        }
+        return res
+    }
+
     fun enqueue(track: CatalogItem.Track) {
         if (released) return
         val player = controller
@@ -207,7 +221,7 @@ class PlaybackController(
         }
 
         scope.launch {
-            resolver.resolve(track.id).fold(
+            resolveTrack(track).fold(
                 onSuccess = { stream ->
                     if (released || controller !== player) return@launch
                     val item = track.toMediaItem(stream)

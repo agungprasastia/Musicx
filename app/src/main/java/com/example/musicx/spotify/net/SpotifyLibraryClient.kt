@@ -8,6 +8,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -110,11 +111,21 @@ class SpotifyLibraryClient(
     }
 
     private fun playlistVariables(offset: Int) = buildJsonObject {
-        put("filters", buildJsonArray { add(JsonPrimitive("Playlists")) })
+        putJsonArray("filters") { add("Playlists") }
+        put("order", null as String?)
         put("textFilter", "")
-        put("limit", PAGE_SIZE)
+        putJsonArray("features") {
+            add("LIKED_SONGS")
+            add("YOUR_EPISODES_V2")
+            add("PRERELEASES")
+            add("EVENTS")
+        }
+        put("limit", 50)
         put("offset", offset)
         put("flatten", true)
+        putJsonArray("expandedFolders") {}
+        put("folderUri", null as String?)
+        put("includeFoldersWhenFlattening", false)
     }
 
     private fun playlistTrackVariables(id: String, offset: Int) = buildJsonObject {
