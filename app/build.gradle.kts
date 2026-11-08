@@ -19,8 +19,25 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            val storeFilePath = System.getenv("MUSICX_RELEASE_STORE_FILE") ?: project.findProperty("MUSICX_RELEASE_STORE_FILE") as? String
+            val storePasswordVal = System.getenv("MUSICX_RELEASE_STORE_PASSWORD") ?: project.findProperty("MUSICX_RELEASE_STORE_PASSWORD") as? String
+            val keyAliasVal = System.getenv("MUSICX_RELEASE_KEY_ALIAS") ?: project.findProperty("MUSICX_RELEASE_KEY_ALIAS") as? String
+            val keyPasswordVal = System.getenv("MUSICX_RELEASE_KEY_PASSWORD") ?: project.findProperty("MUSICX_RELEASE_KEY_PASSWORD") as? String
+
+            if (storeFilePath != null && storePasswordVal != null && keyAliasVal != null && keyPasswordVal != null) {
+                storeFile = file(storeFilePath)
+                storePassword = storePasswordVal
+                keyAlias = keyAliasVal
+                keyPassword = keyPasswordVal
+            }
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("release")
             optimization {
                 enable = true
                 packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
@@ -33,6 +50,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

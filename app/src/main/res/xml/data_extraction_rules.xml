@@ -1,13 +1,11 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
--->
+<?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="sharedpref" path="spotify_session.xml" />
+        <exclude domain="sharedpref" path="listenbrainz_session.xml" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="spotify_session.xml" />
+        <exclude domain="sharedpref" path="listenbrainz_session.xml" />
     </device-transfer>
 </data-extraction-rules>

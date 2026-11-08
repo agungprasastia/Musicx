@@ -26,6 +26,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -40,6 +41,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.musicx.BuildConfig
 import com.example.musicx.catalog.youtube.InnerTubeYouTubeMusicClient
 import com.example.musicx.catalog.youtube.OkHttpInnerTubeTransport
 import com.example.musicx.catalog.youtube.YouTubeMusicRepository
@@ -47,6 +49,9 @@ import com.example.musicx.core.model.CatalogFilter
 import com.example.musicx.core.model.CatalogItem
 import com.example.musicx.local.LocalAwareStreamResolver
 import com.example.musicx.local.LocalLibraryRepository
+import com.example.musicx.scrobble.ListenBrainzClient
+import com.example.musicx.scrobble.ListenBrainzScrobbler
+import com.example.musicx.scrobble.ListenBrainzTokenStore
 import com.example.musicx.playback.PlaybackController
 import com.example.musicx.playback.PlaybackStatus
 import com.example.musicx.playback.PlaybackUiState
@@ -94,6 +99,20 @@ fun MusicxApp(
     var lastSearch by remember { mutableStateOf<SearchOrigin?>(null) }
     var showNowPlaying by rememberSaveable { mutableStateOf(false) }
     var showSpotifyLogin by rememberSaveable { mutableStateOf(false) }
+    var showSettings by rememberSaveable { mutableStateOf(false) }
+    val scrobbleScope = rememberCoroutineScope()
+    val scrobbler = remember(context) {
+        ListenBrainzScrobbler(
+            store = ListenBrainzTokenStore(context.applicationContext),
+            client = ListenBrainzClient(),
+            scope = scrobbleScope,
+            clientVersion = BuildConfig.VERSION_NAME,
+        )
+    }
+    val scrobbleState by scrobbler.state.collectAsState()
+
+    LaunchedEffect(scrobbler) { scrobbler.restore() }
+    LaunchedEffect(playbackState) { scrobbler.onPlayback(playbackState) }
 
     LaunchedEffect(Unit) { spotifyViewModel.restore() }
 
@@ -115,8 +134,9 @@ fun MusicxApp(
     }
 
     BackHandler(enabled = showSpotifyLogin) { showSpotifyLogin = false }
-    BackHandler(enabled = showNowPlaying && !showSpotifyLogin) { showNowPlaying = false }
-    BackHandler(enabled = browseOrigin != null && !showNowPlaying && !showSpotifyLogin) { closeBrowse() }
+    BackHandler(enabled = showSettings && !showSpotifyLogin) { showSettings = false }
+    BackHandler(enabled = showNowPlaying && !showSpotifyLogin && !showSettings) { showNowPlaying = false }
+    BackHandler(enabled = browseOrigin != null && !showNowPlaying && !showSpotifyLogin && !showSettings) { closeBrowse() }
 
     when {
         showSpotifyLogin -> SpotifyLoginScreen(
@@ -125,6 +145,13 @@ fun MusicxApp(
                 spotifyViewModel.connect(secret)
             },
             onCancel = { showSpotifyLogin = false },
+        )
+
+        showSettings -> SettingsScreen(
+            scrobble = scrobbleState,
+            onConnectListenBrainz = scrobbler::connect,
+            onDisconnectListenBrainz = scrobbler::disconnect,
+            onBack = { showSettings = false },
         )
 
         showNowPlaying -> NowPlayingScreen(
@@ -196,7 +223,8 @@ fun MusicxApp(
                         onBrowseSelected = { id ->
                             browseOrigin = BrowseOrigin.Home
                             viewModel.browse(id)
-                        }
+                        },
+                        onOpenSettings = { showSettings = true },
                     )
 
                     MusicTab.Search -> SearchScreen(

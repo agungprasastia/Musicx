@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -39,12 +40,27 @@ private val browseShortcuts = listOf(
 )
 
 @Composable
-fun HomeScreen(onBrowseSelected: (String) -> Unit) {
+fun HomeScreen(
+    onBrowseSelected: (String) -> Unit,
+    onOpenSettings: () -> Unit = {},
+) {
     Column(
         Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 18.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-        Text("GOOD EVENING", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("GOOD EVENING", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                "Settings",
+                Modifier.clickable(role = Role.Button, onClick = onOpenSettings).padding(8.dp),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
         Text("Made for you", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onBackground)
         Text(
             "Browse public YouTube Music collections. Guest access only; no account required.",
@@ -53,7 +69,7 @@ fun HomeScreen(onBrowseSelected: (String) -> Unit) {
         browseShortcuts.forEach { (label, id) ->
             Row(
                 Modifier.fillMaxWidth()
-                    .clickable { onBrowseSelected(id) }
+                    .clickable(role = Role.Button) { onBrowseSelected(id) }
                     .padding(vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {

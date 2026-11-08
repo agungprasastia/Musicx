@@ -20,7 +20,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.example.musicx.core.model.CatalogItem
@@ -39,7 +42,12 @@ fun MusicArtwork(track: MusicSample, modifier: Modifier = Modifier) {
 
 @Composable
 fun SectionHeading(title: String, modifier: Modifier = Modifier) {
-    Text(title, modifier = modifier, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground)
+    Text(
+        title,
+        modifier = modifier.semantics { heading() },
+        style = MaterialTheme.typography.titleLarge,
+        color = MaterialTheme.colorScheme.onBackground
+    )
 }
 
 @Composable
@@ -83,7 +91,10 @@ fun CatalogRow(item: CatalogItem, onClick: () -> Unit) {
         is CatalogItem.Playlist -> "Playlist"
     }
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 6.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

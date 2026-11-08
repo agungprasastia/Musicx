@@ -31,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.example.musicx.playback.PlaybackStatus
 import com.example.musicx.playback.PlaybackUiState
@@ -67,10 +68,14 @@ fun NowPlayingScreen(
             .padding(horizontal = 24.dp, vertical = 18.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text(
                 "⌄  NOW PLAYING",
-                Modifier.clickable(onClick = onBack),
+                Modifier.clickable(role = Role.Button, onClick = onBack).padding(vertical = 8.dp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(statusLabel(state.status), color = MaterialTheme.colorScheme.onSurfaceVariant)
