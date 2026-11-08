@@ -9,6 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,6 +17,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.sp
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -190,26 +193,53 @@ fun MusicxApp(
             modifier = Modifier.fillMaxSize(),
             containerColor = MaterialTheme.colorScheme.background,
             bottomBar = {
-                Column {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.background)
+                ) {
                     MiniPlayer(
                         state = playbackState,
                         onOpen = { if (playbackState.currentTrack != null) showNowPlaying = true },
                         onPlayPause = playbackController::playPause,
                     )
                     Row(
-                        Modifier.fillMaxWidth().height(64.dp),
+                        Modifier
+                            .fillMaxWidth()
+                            .height(68.dp)
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
+                            .padding(horizontal = 4.dp, vertical = 6.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         MusicTab.entries.forEach { tab ->
+                            val isSelected = selectedTab == tab
+                            val icon = when (tab) {
+                                MusicTab.Home -> "⌂"
+                                MusicTab.Search -> "⌕"
+                                MusicTab.Library -> "♫"
+                                MusicTab.Spotify -> "●"
+                            }
                             Column(
-                                Modifier.weight(1f).clickable(role = Role.Tab) { selectedTab = tab }.padding(8.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                                Modifier
+                                    .weight(1f)
+                                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                                    .clickable(role = Role.Tab) { selectedTab = tab }
+                                    .padding(vertical = 4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
                                 Text(
+                                    icon,
+                                    fontSize = 18.sp,
+                                    fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
                                     tab.name,
-                                    color = if (selectedTab == tab) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                    fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -320,47 +350,73 @@ private fun MiniPlayer(
     onPlayPause: () -> Unit,
 ) {
     val track = state.currentTrack
-    Row(
-        Modifier.fillMaxWidth()
-            .height(64.dp)
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+    androidx.compose.material3.Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 4.dp)
             .clickable(enabled = track != null, onClick = onOpen)
             .semantics {
                 contentDescription = track?.let { "Open player: ${it.title}" } ?: "Nothing playing"
-            }
-            .padding(horizontal = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically
+            },
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        shadowElevation = 6.dp
     ) {
-        if (track == null) {
-            Text("Nothing playing", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        } else {
-            CatalogArtwork(track, Modifier.size(44.dp))
-            Column(Modifier.weight(1f)) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .height(64.dp)
+                .padding(horizontal = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (track == null) {
                 Text(
-                    track.title,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    miniPlayerStatus(state),
-                    style = MaterialTheme.typography.labelSmall,
+                    "Nothing playing",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    style = MaterialTheme.typography.bodyMedium
                 )
-            }
-            if (state.status != PlaybackStatus.RESOLVING &&
-                state.status != PlaybackStatus.ERROR &&
-                state.status != PlaybackStatus.IDLE
-            ) {
-                Text(
-                    if (state.isPlaying) "Pause" else "Play",
-                    Modifier.clickable(onClick = onPlayPause).padding(8.dp),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
+            } else {
+                CatalogArtwork(track, Modifier.size(44.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        track.title,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        miniPlayerStatus(state),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                if (state.status != PlaybackStatus.RESOLVING &&
+                    state.status != PlaybackStatus.ERROR &&
+                    state.status != PlaybackStatus.IDLE
+                ) {
+                    androidx.compose.material3.Surface(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .clickable(onClick = onPlayPause),
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = androidx.compose.foundation.shape.CircleShape
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                if (state.isPlaying) "⏸" else "▶",
+                                fontSize = 16.sp,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                            )
+                        }
+                    }
+                }
             }
         }
     }

@@ -8,12 +8,19 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -22,21 +29,30 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.musicx.core.model.CatalogFilter
 import com.example.musicx.core.model.CatalogItem
 
 enum class MusicTab { Home, Search, Library, Spotify }
 
-private val browseShortcuts = listOf(
-    "Charts" to "FEmusic_charts",
-    "New releases" to "FEmusic_new_releases",
-    "Moods & genres" to "FEmusic_moods_and_genres",
+private data class BrowseCollection(
+    val title: String,
+    val subtitle: String,
+    val browseId: String,
+    val gradient: List<Color>
+)
+
+private val homeCollections = listOf(
+    BrowseCollection("Charts", "Top Hits", "FEmusic_charts", listOf(Color(0xFFDF8C64), Color(0xFF503448))),
+    BrowseCollection("New releases", "Fresh Music", "FEmusic_new_releases", listOf(Color(0xFFA3AA7A), Color(0xFF354749))),
+    BrowseCollection("Moods & genres", "Vibe Selector", "FEmusic_moods_and_genres", listOf(Color(0xFF4A6FA5), Color(0xFF16253D))),
+    BrowseCollection("Trending", "Global Mix", "FEmusic_charts", listOf(Color(0xFF8E54E9), Color(0xFF4776E6))),
 )
 
 @Composable
@@ -45,42 +61,107 @@ fun HomeScreen(
     onOpenSettings: () -> Unit = {},
 ) {
     Column(
-        Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+        Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(22.dp)
     ) {
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("GOOD EVENING", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
-                "Settings",
-                Modifier.clickable(role = Role.Button, onClick = onOpenSettings).padding(8.dp),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
+                "GOOD EVENING",
+                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.5.sp, fontSize = 11.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-        Text("Made for you", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onBackground)
-        Text(
-            "Browse public YouTube Music collections. Guest access only; no account required.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        browseShortcuts.forEach { (label, id) ->
-            Row(
-                Modifier.fillMaxWidth()
-                    .clickable(role = Role.Button) { onBrowseSelected(id) }
-                    .padding(vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically
+            Surface(
+                modifier = Modifier
+                    .clickable(role = Role.Button, onClick = onOpenSettings),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(12.dp)
             ) {
-                Text(label, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onBackground)
-                Text("Browse", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                Text(
+                    "⚙ Settings",
+                    Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.primary,
+                )
             }
         }
+
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                "Made for you",
+                style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold, fontSize = 32.sp),
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Text(
+                "Browse public YouTube Music collections. Guest access only; no account required.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        // 2x2 Bento Editorial Grid matching editorial-home.html
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                EditorialGridCard(
+                    title = homeCollections[0].title,
+                    subtitle = homeCollections[0].subtitle,
+                    gradientColors = homeCollections[0].gradient,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onBrowseSelected(homeCollections[0].browseId) }
+                )
+                EditorialGridCard(
+                    title = homeCollections[1].title,
+                    subtitle = homeCollections[1].subtitle,
+                    gradientColors = homeCollections[1].gradient,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onBrowseSelected(homeCollections[1].browseId) }
+                )
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                EditorialGridCard(
+                    title = homeCollections[2].title,
+                    subtitle = homeCollections[2].subtitle,
+                    gradientColors = homeCollections[2].gradient,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onBrowseSelected(homeCollections[2].browseId) }
+                )
+                EditorialGridCard(
+                    title = homeCollections[3].title,
+                    subtitle = homeCollections[3].subtitle,
+                    gradientColors = homeCollections[3].gradient,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onBrowseSelected(homeCollections[3].browseId) }
+                )
+            }
+        }
+
+        SectionHeading("Made for your mood")
+
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            MoodRowCard(
+                title = "After hours",
+                subtitle = "Curated late night mix",
+                gradientColors = listOf(Color(0xFF845EC2), Color(0xFFD65DB1)),
+                onClick = { onBrowseSelected("FEmusic_moods_and_genres") }
+            )
+            MoodRowCard(
+                title = "Deep focus",
+                subtitle = "Instrumental soundscapes & lo-fi",
+                gradientColors = listOf(Color(0xFF0089BA), Color(0xFF2C73D2)),
+                onClick = { onBrowseSelected("FEmusic_moods_and_genres") }
+            )
+        }
+
         Text(
             "YouTube Music integration is unofficial and may stop working when the service changes.",
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
         )
     }
 }
@@ -97,31 +178,70 @@ fun SearchScreen(
     var filter by rememberSaveable { mutableStateOf(CatalogFilter.ALL) }
 
     Column(
-        Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-        Text("Search music", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onBackground)
+        Text(
+            "Search music",
+            style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
+            color = MaterialTheme.colorScheme.onBackground
+        )
+
         OutlinedTextField(
             value = query,
             onValueChange = {
                 query = it
                 if (it.isBlank()) onSearch("", filter)
             },
-            modifier = Modifier.fillMaxWidth().testTag("search-input"),
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("search-input"),
             placeholder = { Text("Search songs, albums, artists") },
+            leadingIcon = { Text("⌕", fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) },
+            trailingIcon = {
+                if (query.isNotEmpty()) {
+                    Text(
+                        "✕",
+                        Modifier
+                            .clickable {
+                                query = ""
+                                onSearch("", filter)
+                            }
+                            .padding(8.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
             singleLine = true,
+            shape = RoundedCornerShape(20.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = Color.Transparent,
+            ),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(
                 onSearch = { if (query.isNotBlank()) onSearch(query, filter) }
             )
         )
+
         Button(
             onClick = { onSearch(query, filter) },
             enabled = query.isNotBlank(),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
         ) {
-            Text("Search YouTube Music")
+            Text("Search YouTube Music", fontWeight = FontWeight.SemiBold)
         }
+
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             CatalogFilter.entries.forEach { entry ->
                 FilterChip(
@@ -130,12 +250,29 @@ fun SearchScreen(
                         filter = entry
                         if (query.isNotBlank()) onSearch(query, entry)
                     },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                    ),
                     label = { Text(filterLabel(entry)) }
                 )
             }
         }
+
         if (query.isBlank()) {
-            Text("Find your next favorite", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Text(
+                    "Find your next favorite",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    "Type above to search millions of tracks, official artist pages, and community playlists.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
+            }
         } else {
             CatalogStateContent(
                 state = state,
@@ -157,11 +294,29 @@ fun BrowseScreen(
     onRetry: () -> Unit,
 ) {
     Column(
-        Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-        Text("← Back", Modifier.clickable(onClick = onBack), color = MaterialTheme.colorScheme.primary)
-        Text("Browse", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onBackground)
+        Surface(
+            modifier = Modifier.clickable(role = Role.Button, onClick = onBack),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text(
+                "← Back",
+                Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+        Text(
+            "Browse",
+            style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
+            color = MaterialTheme.colorScheme.onBackground
+        )
         CatalogStateContent(
             state = state,
             onRetry = onRetry,
@@ -182,28 +337,77 @@ fun LibraryScreen(
     onTrackSelected: (CatalogItem.Track) -> Unit,
 ) {
     Column(
-        Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-        Text("Your Library", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onBackground)
+        Text(
+            "Your Library",
+            style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
+            color = MaterialTheme.colorScheme.onBackground
+        )
         when {
             !hasPermission -> {
-                Text("Musicx needs permission to access your audio files.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Button(onClick = onRequestPermission) { Text("Grant access") }
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                ) {
+                    Column(
+                        Modifier.padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Text(
+                            "Local Audio Access",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                        )
+                        Text(
+                            "Musicx needs permission to scan and play audio files stored on your device storage.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Button(
+                            onClick = onRequestPermission,
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Grant access")
+                        }
+                    }
+                }
             }
             isLoading -> {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(Modifier.size(22.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CircularProgressIndicator(Modifier.size(24.dp))
                     Text("Scanning local audio…", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             tracks.isEmpty() -> {
-                Text("No audio files found on this device.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "No audio files found on this device.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             else -> {
-                Text("${tracks.size} tracks", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                tracks.forEach { track ->
-                    CatalogRow(track) { onTrackSelected(track) }
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "${tracks.size} tracks found",
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    tracks.forEach { track ->
+                        CatalogRow(track) { onTrackSelected(track) }
+                    }
                 }
             }
         }
@@ -223,10 +427,11 @@ private fun CatalogStateContent(
         }
 
         CatalogUiState.Loading -> Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(vertical = 12.dp)
         ) {
-            CircularProgressIndicator(Modifier.size(22.dp))
+            CircularProgressIndicator(Modifier.size(24.dp))
             Text("Loading YouTube Music", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
@@ -235,12 +440,20 @@ private fun CatalogStateContent(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        is CatalogUiState.Error -> Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        is CatalogUiState.Error -> Column(
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(vertical = 8.dp)
+        ) {
             Text(state.message, color = MaterialTheme.colorScheme.error)
-            Button(onClick = onRetry) { Text("Retry") }
+            Button(
+                onClick = onRetry,
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Retry")
+            }
         }
 
-        is CatalogUiState.Results -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        is CatalogUiState.Results -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             state.title?.let { SectionHeading(it) }
             state.items.forEach { item ->
                 CatalogRow(item) { onItemSelected(item) }
